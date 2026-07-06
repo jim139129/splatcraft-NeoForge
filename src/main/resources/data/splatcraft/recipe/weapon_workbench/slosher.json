@@ -1,0 +1,93 @@
+{
+  "type": "splatcraft:weapon_workbench",
+  "tab": "splatcraft:weapon_workbench_tabs/buckets",
+  "pos": 0,
+  "recipes": [
+    {
+      "name": "weaponType.original",
+      "advancement": "splatcraft:unlocks/slosher",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:slosher"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 8
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 16
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 10
+        },
+        {
+          "item": "minecraft:bucket",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "weaponType.classic",
+      "advancement": "splatcraft:unlocks/classic_slosher",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:classic_slosher"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 8
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 16
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 10
+        },
+        {
+          "item": "minecraft:bucket",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "weaponType.soda",
+      "advancement": "splatcraft:unlocks/soda_slosher",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:soda_slosher"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 6
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 16
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 10
+        },
+        {
+          "item": "minecraft:bucket",
+          "count": 1
+        },
+        {
+          "item": "minecraft:yellow_dye",
+          "count": 4
+        },
+        {
+          "item": "minecraft:light_blue_dye",
+          "count": 2
+        }
+      ]
+    }
+  ]
+}

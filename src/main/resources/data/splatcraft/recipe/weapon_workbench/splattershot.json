@@ -1,0 +1,99 @@
+{
+  "type": "splatcraft:weapon_workbench",
+  "tab": "splatcraft:weapon_workbench_tabs/shooters",
+  "pos": 1,
+  "recipes": [
+    {
+      "name": "weaponType.original",
+      "advancement": "splatcraft:unlocks/splattershot",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:splattershot"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 5
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 14
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "name": "weaponType.tentatek",
+      "advancement": "splatcraft:unlocks/tentatek_splattershot",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:tentatek_splattershot"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 7
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 8
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "name": "weaponType.wasabi",
+      "advancement": "splatcraft:unlocks/wasabi_splattershot",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:wasabi_splattershot"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 5
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 14
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 4
+        },
+        {
+          "item": "minecraft:green_dye",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "name": "weaponType.special",
+      "advancement": "splatcraft:story/get_all_weapons",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:ancient_splattershot"
+      },
+      "ingredients": [
+        {
+          "item": "minecraft:netherite_scrap",
+          "count": 5
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 14
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 4
+        }
+      ]
+    }
+  ]
+}

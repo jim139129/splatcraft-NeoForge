@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "values": [
+    "#splatcraft:clears_ink",
+    "#splatcraft:deters_ink",
+    "#splatcraft:barrier_bars",
+    "#c:glass",
+    "#c:glass_panes",
+    "minecraft:ice",
+    "splatcraft:sardinium_block",
+    "splatcraft:raw_sardinium_block",
+    "splatcraft:empty_inkwell",
+    "splatcraft:ammo_knights_debris",
+    "splatcraft:inkwell",
+    "splatcraft:spawn_pad",
+    "splatcraft:spawn_pad_edge"
+  ]
+}

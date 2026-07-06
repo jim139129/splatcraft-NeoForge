@@ -1,0 +1,42 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+          {
+            "function": "minecraft:copy_custom_data",
+            "conditions": [
+              {
+                "condition": "minecraft:block_state_property",
+                "block": "splatcraft:coralite",
+                "properties": {
+                  "colored": "true"
+                }
+              }
+            ],
+            "source": "block_entity",
+            "ops": [
+              {
+                "source": "Color",
+                "target": "Color",
+                "op": "replace"
+              }
+            ]
+          }
+        ],
+          "name": "splatcraft:coralite"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ]
+    }
+  ]
+}

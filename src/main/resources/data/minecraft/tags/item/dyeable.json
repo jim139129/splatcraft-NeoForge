@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "splatcraft:ink_cloth_helmet",
+    "splatcraft:ink_cloth_chestplate",
+    "splatcraft:ink_cloth_leggings",
+    "splatcraft:ink_cloth_boots"
+  ]
+}

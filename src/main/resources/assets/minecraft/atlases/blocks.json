@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "block",
+      "prefix": "block/"
+    },
+    {
+      "type": "directory",
+      "source": "item",
+      "prefix": "item/"
+    },
+    {
+      "type": "directory",
+      "source": "blocks",
+      "prefix": "blocks/"
+    },
+    {
+      "type": "directory",
+      "source": "items",
+      "prefix": "items/"
+    },
+    {
+      "type": "directory",
+      "source": "weapons",
+      "prefix": "weapons/"
+    },
+    {
+      "type": "directory",
+      "source": "models",
+      "prefix": "models/"
+    },
+    {
+      "type": "directory",
+      "source": "particle",
+      "prefix": "particle/"
+    },
+    {
+      "type": "directory",
+      "source": "gui/icons",
+      "prefix": "gui/icons/"
+    }
+  ]
+}

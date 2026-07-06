@@ -1,0 +1,29 @@
+{
+  "type": "splatcraft:weapon_workbench",
+  "tab": "splatcraft:weapon_workbench_tabs/sub_weapons",
+  "pos": 0,
+  "recipes": [
+    {
+      "name": "weaponType.original",
+      "advancement": "splatcraft:unlocks/splat_bomb",
+      "result": {
+        "count": 1,
+        "id": "splatcraft:splat_bomb"
+      },
+      "ingredients": [
+        {
+          "item": "splatcraft:sardinium",
+          "count": 3
+        },
+        {
+          "item": "splatcraft:power_egg",
+          "count": 5
+        },
+        {
+          "item": "minecraft:ink_sac",
+          "count": 5
+        }
+      ]
+    }
+  ]
+}

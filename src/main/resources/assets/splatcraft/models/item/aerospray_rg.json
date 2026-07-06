@@ -1,0 +1,7 @@
+{
+  "parent": "splatcraft:item/aerospray_mg",
+  "textures": {
+    "0": "splatcraft:weapons/aerospray_rg",
+    "particle": "splatcraft:weapons/aerospray_rg"
+  }
+}

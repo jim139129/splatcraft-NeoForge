@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "R"
+  ],
+  "key": {
+    "R": {
+      "item": "splatcraft:color_changer"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "splatcraft:color_changer"
+  }
+}
