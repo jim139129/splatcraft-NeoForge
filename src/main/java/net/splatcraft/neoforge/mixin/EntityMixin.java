@@ -7,13 +7,19 @@ import net.splatcraft.neoforge.item.WeaponItem;
 import net.splatcraft.neoforge.player.SplatcraftPlayerInfoEvents;
 import net.splatcraft.neoforge.player.SquidInkMovement;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
 public class EntityMixin {
+    @Unique
+    private int splatcraft$cooldownCheckTick = Integer.MIN_VALUE;
+    @Unique
+    private boolean splatcraft$hasWeaponCooldown;
+
     @Inject(method = "isInvisible", at = @At("TAIL"), cancellable = true)
     private void splatcraft$isInvisible(CallbackInfoReturnable<Boolean> callback) {
         Entity entity = (Entity) (Object) this;
@@ -24,22 +30,29 @@ public class EntityMixin {
         }
     }
 
-    @Inject(method = "setSprinting", at = @At("HEAD"), cancellable = true)
-    private void splatcraft$setSprinting(boolean sprinting, CallbackInfo callback) {
+    @ModifyVariable(method = "setSprinting", at = @At("HEAD"), argsOnly = true)
+    private boolean splatcraft$preventWeaponCooldownSprinting(boolean sprinting) {
         Entity entity = (Entity) (Object) this;
         if (sprinting && entity instanceof Player player && hasSplatcraftWeaponCooldown(player)) {
-            player.setSprinting(false);
-            callback.cancel();
+            return false;
         }
+        return sprinting;
     }
 
-    private static boolean hasSplatcraftWeaponCooldown(Player player) {
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+    private boolean hasSplatcraftWeaponCooldown(Player player) {
+        if (splatcraft$cooldownCheckTick == player.tickCount) {
+            return splatcraft$hasWeaponCooldown;
+        }
+
+        splatcraft$cooldownCheckTick = player.tickCount;
+        splatcraft$hasWeaponCooldown = false;
+        for (int slot = 0; slot < player.getInventory().items.size(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
             if (stack.getItem() instanceof WeaponItem && player.getCooldowns().isOnCooldown(stack.getItem())) {
-                return true;
+                splatcraft$hasWeaponCooldown = true;
+                break;
             }
         }
-        return false;
+        return splatcraft$hasWeaponCooldown;
     }
 }

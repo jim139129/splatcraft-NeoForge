@@ -2,7 +2,9 @@ package net.splatcraft.neoforge.client;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -54,6 +56,10 @@ public class WeaponWorkbenchScreen extends AbstractContainerScreen<WeaponWorkben
     private int ingredientPage;
     private int tickTime;
     private boolean craftButtonPressed;
+    // Recipe/tab lists are expensive to compute (full stream + sort) and are queried many times per frame
+    // by renderLabels/renderTooltip/clampState/mouse handlers. Cache them and rebuild once per frame.
+    private List<RecipeHolder<WeaponWorkbenchTabRecipe>> cachedVisibleTabs;
+    private final Map<ResourceLocation, List<RecipeHolder<WeaponWorkbenchRecipe>>> cachedRecipesByTab = new HashMap<>();
 
     public WeaponWorkbenchScreen(WeaponWorkbenchMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -67,7 +73,13 @@ public class WeaponWorkbenchScreen extends AbstractContainerScreen<WeaponWorkben
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        invalidateRecipeCache();
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
         tickTime++;
     }
 
@@ -279,7 +291,7 @@ public class WeaponWorkbenchScreen extends AbstractContainerScreen<WeaponWorkben
             int y = INGREDIENT_Y;
             WeaponWorkbenchRecipe.StackedIngredient ingredient = subtype.ingredients().get(index);
             ItemStack stack = ingredient.displayStack(tickTime);
-            boolean hasMaterial = menu.hasIngredients(player, List.of(ingredient));
+            boolean hasMaterial = menu.hasIngredient(player, ingredient);
             guiGraphics.renderItem(stack, x, y);
             guiGraphics.renderItemDecorations(font, stack, x, y, ingredient.count() == 1 ? null : String.valueOf(ingredient.count()));
             if (!hasMaterial) {
@@ -503,20 +515,35 @@ public class WeaponWorkbenchScreen extends AbstractContainerScreen<WeaponWorkben
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
+    private void invalidateRecipeCache() {
+        cachedVisibleTabs = null;
+        cachedRecipesByTab.clear();
+    }
+
     private List<RecipeHolder<WeaponWorkbenchTabRecipe>> clientVisibleTabs() {
-        return player.level().getRecipeManager().getAllRecipesFor(SplatcraftRecipeSerializers.WEAPON_WORKBENCH_TAB_TYPE.get()).stream()
-                .sorted(Comparator.comparingInt((RecipeHolder<WeaponWorkbenchTabRecipe> recipe) -> recipe.value().pos())
-                        .thenComparing(recipe -> recipe.id().toString()))
-                .filter(tab -> !tab.value().hidden() || !clientRecipesForTab(tab.id()).isEmpty())
-                .toList();
+        if (cachedVisibleTabs == null) {
+            cachedVisibleTabs = player.level().getRecipeManager().getAllRecipesFor(SplatcraftRecipeSerializers.WEAPON_WORKBENCH_TAB_TYPE.get()).stream()
+                    .sorted(Comparator.comparingInt((RecipeHolder<WeaponWorkbenchTabRecipe> recipe) -> recipe.value().pos())
+                            .thenComparing(recipe -> recipe.id().toString()))
+                    .filter(tab -> !tab.value().hidden() || !clientRecipesForTab(tab.id()).isEmpty())
+                    .toList();
+        }
+        return cachedVisibleTabs;
     }
 
     private List<RecipeHolder<WeaponWorkbenchRecipe>> clientRecipesForTab(ResourceLocation tabId) {
-        return player.level().getRecipeManager().getAllRecipesFor(SplatcraftRecipeSerializers.WEAPON_WORKBENCH_TYPE.get()).stream()
-                .sorted(Comparator.comparingInt((RecipeHolder<WeaponWorkbenchRecipe> recipe) -> recipe.value().pos())
-                        .thenComparing(recipe -> recipe.id().toString()))
-                .filter(recipe -> recipe.value().tab().equals(tabId))
-                .filter(recipe -> !availableSubtypes(recipe.value()).isEmpty())
-                .toList();
+        List<RecipeHolder<WeaponWorkbenchRecipe>> cached = cachedRecipesByTab.get(tabId);
+        if (cached != null) {
+            return cached;
+        }
+        List<RecipeHolder<WeaponWorkbenchRecipe>> computed =
+                player.level().getRecipeManager().getAllRecipesFor(SplatcraftRecipeSerializers.WEAPON_WORKBENCH_TYPE.get()).stream()
+                        .sorted(Comparator.comparingInt((RecipeHolder<WeaponWorkbenchRecipe> recipe) -> recipe.value().pos())
+                                .thenComparing(recipe -> recipe.id().toString()))
+                        .filter(recipe -> recipe.value().tab().equals(tabId))
+                        .filter(recipe -> !availableSubtypes(recipe.value()).isEmpty())
+                        .toList();
+        cachedRecipesByTab.put(tabId, computed);
+        return computed;
     }
 }

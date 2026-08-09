@@ -2,7 +2,6 @@ package net.splatcraft.neoforge.player;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -63,20 +62,12 @@ public final class SplatcraftPlayerInfoEvents {
 
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            PlayerInfo info = playerInfo(player);
+            if (info.isSquid()) {
+                info.setSquid(false);
+                player.refreshDimensions();
+            }
             sync(player);
-        }
-    }
-
-    public static void onStartTracking(PlayerEvent.StartTracking event) {
-        if (!(event.getEntity() instanceof ServerPlayer trackingPlayer)) {
-            return;
-        }
-
-        Entity target = event.getTarget();
-        if (target instanceof ServerPlayer trackedPlayer) {
-            PlayerInfo info = trackedPlayer.getData(SplatcraftAttachments.PLAYER_INFO.get());
-            ensureInitialized(trackedPlayer, info);
-            sync(trackedPlayer);
         }
     }
 

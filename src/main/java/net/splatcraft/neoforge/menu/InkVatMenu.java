@@ -133,7 +133,15 @@ public class InkVatMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (inkVat == null || !isIndexInBounds(id)) {
+        if (inkVat == null) {
+            return false;
+        }
+        // Recompute the available colors before validating the index. Ingredient/filter edits that
+        // bypass the menu's slot listeners (e.g. a hopper mutating the container directly) leave the
+        // cached recipe list stale; validating against it would let a hand-crafted vanilla button
+        // packet select a color the current filter forbids.
+        refreshRecipes(false);
+        if (!isIndexInBounds(id)) {
             return false;
         }
         int color = recipes.get(id);
@@ -329,7 +337,10 @@ public class InkVatMenu extends AbstractContainerMenu {
         @Override
         public void setChanged() {
             super.setChanged();
-            refreshRecipes();
+            // Ingredient slots only affect the craftable amount, not which colors are available;
+            // resetting the selection here (like the filter slot does) would wipe the player's
+            // chosen color every time they topped up ingredients.
+            refreshRecipes(false);
         }
     }
 

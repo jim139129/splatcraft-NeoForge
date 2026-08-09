@@ -81,11 +81,12 @@ public class InkVatScreen extends net.minecraft.client.gui.screens.inventory.Abs
         this.scrolling = false;
         if (button == 0 && menu.hasColorOptions()) {
             int recipeIndex = hoveredRecipeIndex(mouseX, mouseY);
+            // clickMenuButton sends the authoritative UpdateBlockColorPayload and predicts locally.
+            // Do NOT also send the vanilla button packet: it would make the server process the same
+            // click twice, and its handler validates against the menu's (potentially stale) recipe
+            // cache rather than the payload's fresh recompute.
             if (recipeIndex != -1 && minecraft != null && minecraft.player != null && menu.clickMenuButton(minecraft.player, recipeIndex)) {
                 Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_STONECUTTER_SELECT_RECIPE, 1.0F));
-                if (minecraft.gameMode != null) {
-                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId, recipeIndex);
-                }
                 return true;
             }
 
@@ -201,11 +202,13 @@ public class InkVatScreen extends net.minecraft.client.gui.screens.inventory.Abs
     }
 
     private void updateStartIndex() {
-        startIndex = Math.round(scrollOffs * getOffscreenColumns()) * COLOR_ROWS;
-        int maxStartIndex = Math.max(0, menu.getSortedRecipeIndexes().size() - VISIBLE_COLORS);
-        if (startIndex > maxStartIndex) {
-            startIndex = maxStartIndex - maxStartIndex % COLOR_ROWS;
-        }
+        // Colours are laid out column-first (COLOR_ROWS per column), so startIndex must stay a
+        // multiple of COLOR_ROWS to keep columns aligned. Scrolling all the way right lands on
+        // getOffscreenColumns() columns of travel; clamp to that column-aligned maximum. The old
+        // clamp used size - VISIBLE_COLORS and rounded down, which for an odd colour count dropped
+        // the final (half-filled) column entirely, making the last colour unselectable.
+        int maxStartIndex = getOffscreenColumns() * COLOR_ROWS;
+        startIndex = Math.min(Math.round(scrollOffs * getOffscreenColumns()) * COLOR_ROWS, maxStartIndex);
     }
 
     private boolean isScrollBarActive() {

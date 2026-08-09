@@ -533,6 +533,7 @@
   "status.clear_ink.success": "成功清理了 %s 个方块",
   "status.change_color.out_of_world": "§c无法改变世界外墨水的颜色",
   "status.change_color.success": "成功将 %s 个方块改变至 %s",
+  "status.area_command.too_large": "§c所选区域过大",
   "status.blueprint.invalid": "这张蓝图是空的。",
   "status.blueprint.already_unlocked.single": "你已经拥有这张蓝图。",
   "status.blueprint.already_unlocked": "你已经完成了这组蓝图。",
@@ -578,5 +579,6 @@
   "key.subWeaponHotkey": "使用次要武器",
   "key.specialWeaponHotkey": "使用特殊武器",
   "attribute.splatcraft.ink_swim_speed": "提升鱿鱼冲刺速度",
-  "disconnect.lost": "发生通信错误"
+  "disconnect.lost": "发生通信错误",
+  "commands.superjump.cross_dimension": "§c目标必须位于同一维度"
 }

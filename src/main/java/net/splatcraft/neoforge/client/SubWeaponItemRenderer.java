@@ -2,6 +2,7 @@ package net.splatcraft.neoforge.client;
 
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
+import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
@@ -10,6 +11,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -31,6 +33,10 @@ public class SubWeaponItemRenderer extends BlockEntityWithoutLevelRenderer {
             guiModel("suction_bomb"),
             "curling_bomb",
             guiModel("curling_bomb"));
+
+    // Reused per entity type instead of allocating a fresh entity every frame. Rendering is single-threaded,
+    // the dummy is never ticked (age stays 0), and its stack-derived state is re-applied on each use.
+    private final Map<EntityType<?>, AbstractSubWeaponEntity> renderEntities = new HashMap<>();
 
     private SubWeaponItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(), Minecraft.getInstance().getEntityModels());
@@ -65,8 +71,7 @@ public class SubWeaponItemRenderer extends BlockEntityWithoutLevelRenderer {
             return;
         }
 
-        AbstractSubWeaponEntity entity = AbstractSubWeaponEntity.create(subWeapon.entityType(), level, 0.0D, 0.0D, 0.0D, stack);
-        entity.isItem = true;
+        AbstractSubWeaponEntity entity = renderEntity(subWeapon.entityType(), level, stack);
         poseStack.pushPose();
         poseStack.translate(0.5D, 0.55D, 0.5D);
         minecraft.getEntityRenderDispatcher().getRenderer(entity).render(
@@ -77,6 +82,23 @@ public class SubWeaponItemRenderer extends BlockEntityWithoutLevelRenderer {
                 bufferSource,
                 packedLight);
         poseStack.popPose();
+    }
+
+    private AbstractSubWeaponEntity renderEntity(
+            EntityType<? extends AbstractSubWeaponEntity> entityType,
+            Level level,
+            ItemStack stack
+    ) {
+        AbstractSubWeaponEntity entity = renderEntities.get(entityType);
+        if (entity == null || entity.level() != level) {
+            entity = AbstractSubWeaponEntity.create(entityType, level, 0.0D, 0.0D, 0.0D, stack);
+            renderEntities.put(entityType, entity);
+        } else {
+            entity.setSourceWeapon(stack);
+            entity.setPos(0.0D, 0.0D, 0.0D);
+        }
+        entity.isItem = true;
+        return entity;
     }
 
     private static boolean renderGuiModel(

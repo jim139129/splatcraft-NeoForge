@@ -102,7 +102,7 @@ public class SpawnShieldEntity extends Entity implements ColoredEntity {
 
     @Override
     public void kill() {
-        if (spawnPadPos == null) {
+        if (!hasValidSpawnPad()) {
             super.kill();
         }
     }

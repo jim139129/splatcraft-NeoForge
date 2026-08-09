@@ -39,7 +39,10 @@ public class ColoredArmorItem extends ArmorItem {
         }
 
         if (!InkColorComponent.isColorLocked(stack)) {
-            InkColorComponent.setColor(stack, SplatcraftPlayerInfoEvents.color(player));
+            int color = SplatcraftPlayerInfoEvents.color(player);
+            if (InkColorComponent.color(stack).orElse(-1) != color) {
+                InkColorComponent.setColor(stack, color);
+            }
         }
         syncDyedColor(stack);
     }
@@ -71,7 +74,10 @@ public class ColoredArmorItem extends ArmorItem {
     }
 
     private static void syncDyedColor(ItemStack stack) {
-        stack.set(DataComponents.DYED_COLOR, new DyedItemColor(InkColorComponent.tintColor(stack, 0) & 0xFFFFFF, false));
+        DyedItemColor expected = new DyedItemColor(InkColorComponent.tintColor(stack, 0) & 0xFFFFFF, false);
+        if (!expected.equals(stack.get(DataComponents.DYED_COLOR))) {
+            stack.set(DataComponents.DYED_COLOR, expected);
+        }
     }
 
     private static MutableComponent colorName(int color) {

@@ -533,6 +533,7 @@
   "status.clear_ink.success": "Evaporati %s blocchi di inchiostro",
   "status.change_color.out_of_world": "§cNon è possibile ricolorare inchiostro fuori dal mondo!",
   "status.change_color.success": "Ricolorati %s blocchi con %s",
+  "status.area_command.too_large": "§cL'area selezionata è troppo grande",
   "status.blueprint.invalid": "Questo progetto è vuoto.",
   "status.blueprint.already_unlocked.single": "Hai già questo progetto.",
   "status.blueprint.already_unlocked": "Hai già tutti i progetti di questa categoria.",
@@ -578,5 +579,6 @@
   "key.subWeaponHotkey": "Uso rapido dell'arma secondaria",
   "key.specialWeaponHotkey": "Uso rapido dell'arma speciale",
   "attribute.splatcraft.ink_swim_speed": "Velocita di nuoto nell'inchiostro",
-  "disconnect.lost": "Si è verificato un errore di comunicazione."
+  "disconnect.lost": "Si è verificato un errore di comunicazione.",
+  "commands.superjump.cross_dimension": "§cIl bersaglio deve essere nella stessa dimensione"
 }

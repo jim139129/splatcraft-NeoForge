@@ -3,6 +3,7 @@ package net.splatcraft.neoforge.data;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.JsonOps;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,16 +88,22 @@ public final class SplatcraftData {
             Map<ResourceLocation, List<Integer>> loaded = new HashMap<>();
 
             entries.forEach((id, element) -> {
-                JsonObject json = element.getAsJsonObject();
-                List<Integer> values = GsonHelper.getAsBoolean(json, "replace", false)
-                        ? new ArrayList<>()
-                        : new ArrayList<>(loaded.getOrDefault(id, List.of()));
+                // A malformed datapack file must not abort the whole reload (which would fail
+                // server startup); log and skip it like the weapon settings listener does.
+                try {
+                    JsonObject json = GsonHelper.convertToJsonObject(element, "ink color tag");
+                    List<Integer> values = GsonHelper.getAsBoolean(json, "replace", false)
+                            ? new ArrayList<>()
+                            : new ArrayList<>(loaded.getOrDefault(id, List.of()));
 
-                for (JsonElement value : GsonHelper.getAsJsonArray(json, "values")) {
-                    parseColorValue(value).ifPresent(values::add);
+                    for (JsonElement value : GsonHelper.getAsJsonArray(json, "values")) {
+                        parseColorValue(value).ifPresent(values::add);
+                    }
+
+                    loaded.put(id, List.copyOf(values));
+                } catch (IllegalStateException | JsonSyntaxException exception) {
+                    Splatcraft.LOGGER.warn("Failed to load ink color tag {}: {}", id, exception.getMessage());
                 }
-
-                loaded.put(id, List.copyOf(values));
             });
 
             inkColorTags = Map.copyOf(loaded);

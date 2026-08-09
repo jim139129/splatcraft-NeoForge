@@ -143,6 +143,15 @@ public class InkVatBlockEntity extends BaseContainerBlockEntity implements World
         return stack;
     }
 
+    /**
+     * The output slot holds a cost-free preview stack refreshed every tick; ingredients are only
+     * consumed when the preview is taken out. Clear it before dropping contents so breaking the
+     * vat cannot duplicate inkwells.
+     */
+    public void clearPreviewOutput() {
+        inventory.set(OUTPUT_SLOT, ItemStack.EMPTY);
+    }
+
     public boolean consumeIngredients(int count) {
         if (count <= 0
                 || inventory.get(INK_SAC_SLOT).getCount() < count

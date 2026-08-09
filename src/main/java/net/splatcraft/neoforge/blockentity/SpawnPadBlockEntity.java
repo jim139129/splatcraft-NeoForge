@@ -13,7 +13,10 @@ import net.splatcraft.neoforge.registry.SplatcraftBlockEntities;
 import net.splatcraft.neoforge.registry.SplatcraftEntities;
 
 public class SpawnPadBlockEntity extends InkColorBlockEntity {
+    private static final int MISSING_SHIELD_GRACE_TICKS = 20;
+
     private UUID spawnShieldUuid;
+    private int missingShieldTicks;
 
     public SpawnPadBlockEntity(BlockPos pos, BlockState state) {
         super(SplatcraftBlockEntities.SPAWN_PAD.get(), pos, state);
@@ -26,7 +29,10 @@ public class SpawnPadBlockEntity extends InkColorBlockEntity {
 
         int shieldColor = spawnPad.effectiveColor();
         SpawnShieldEntity shield = spawnPad.getSpawnShield(serverLevel);
-        if (shield == null || shield.isRemoved()) {
+        if (shield == null) {
+            if (spawnPad.spawnShieldUuid != null && spawnPad.missingShieldTicks++ < MISSING_SHIELD_GRACE_TICKS) {
+                return;
+            }
             shield = new SpawnShieldEntity(SplatcraftEntities.SPAWN_SHIELD.get(), serverLevel);
             shield.setSpawnPadPos(pos);
             shield.setColor(shieldColor);
@@ -35,6 +41,7 @@ public class SpawnPadBlockEntity extends InkColorBlockEntity {
             serverLevel.addFreshEntity(shield);
             spawnPad.setSpawnShield(shield);
         } else {
+            spawnPad.missingShieldTicks = 0;
             shield.setSpawnPadPos(pos);
             shield.setColor(shieldColor);
             shield.setPos(pos.getX() + 0.5D, pos.getY() - 1.0D, pos.getZ() + 0.5D);
@@ -53,6 +60,7 @@ public class SpawnPadBlockEntity extends InkColorBlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         spawnShieldUuid = tag.hasUUID("SpawnShield") ? tag.getUUID("SpawnShield") : null;
+        missingShieldTicks = 0;
     }
 
     public UUID getSpawnShieldUuid() {
@@ -61,6 +69,7 @@ public class SpawnPadBlockEntity extends InkColorBlockEntity {
 
     public void setSpawnShieldUuid(UUID spawnShieldUuid) {
         this.spawnShieldUuid = spawnShieldUuid;
+        missingShieldTicks = 0;
         setChanged();
     }
 

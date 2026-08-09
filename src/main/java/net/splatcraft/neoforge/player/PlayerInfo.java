@@ -105,7 +105,6 @@ public class PlayerInfo implements INBTSerializable<CompoundTag> {
         CompoundTag tag = new CompoundTag();
         tag.putInt("Color", color);
         tag.putBoolean("IsSquid", squid);
-        tag.putString("InkType", inkType().toString());
         tag.putBoolean("Initialized", initialized);
         if (!inkBand.isEmpty()) {
             tag.put("InkBand", inkBand.saveOptional(provider));

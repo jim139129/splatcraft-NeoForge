@@ -26,6 +26,7 @@ public class BurstBombEntity extends AbstractSubWeaponEntity {
     @Override
     protected void onHitEntity(EntityHitResult result) {
         if (!level().isClientSide && result.getEntity() instanceof LivingEntity target) {
+            markDirectHit(target);
             InkDamageUtils.doSplatDamage(
                     level(),
                     target,

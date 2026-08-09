@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.core.BlockPos;
@@ -23,6 +24,7 @@ import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -45,6 +47,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
@@ -54,6 +57,7 @@ import net.neoforged.neoforge.client.event.RenderArmEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
@@ -94,6 +98,7 @@ public final class SplatcraftClient {
     private static float inkHudTime;
     private static float previousInkPercent;
     private static float inkFlash;
+    private static SquidFormRenderer squidFormRenderer;
     private static Boolean suppressedBobViewValue;
     private static final IClientItemExtensions WEAPON_CLIENT_EXTENSIONS = new IClientItemExtensions() {
         @Override
@@ -127,6 +132,7 @@ public final class SplatcraftClient {
         modEventBus.addListener(SplatcraftClient::registerKeyMappings);
         modEventBus.addListener(SplatcraftClient::registerAdditionalModels);
         modEventBus.addListener(SplatcraftClient::registerClientExtensions);
+        modEventBus.addListener(SplatcraftClient::registerClientReloadListeners);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onComputeFovModifier);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onMovementInput);
@@ -137,6 +143,7 @@ public final class SplatcraftClient {
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onRenderFramePost);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onRenderGui);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onRenderNameTag);
+        NeoForge.EVENT_BUS.addListener(SplatcraftClient::onRenderPlayer);
         NeoForge.EVENT_BUS.addListener(SplatcraftClient::onClientChat);
         NeoForge.EVENT_BUS.addListener(WorldInkRenderer::onRenderLevelStage);
     }
@@ -166,12 +173,16 @@ public final class SplatcraftClient {
         });
     }
 
+    static void registerClientReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> InkAccessoryLayer.clearResourceCache());
+    }
+
     private static void handlePlayerSkinOverlay(PlayerSkinOverlayPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> PlayerInkColoredSkinLayer.apply(payload.playerId(), payload.imageBytes()));
     }
 
     static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(SplatcraftEntities.INK_SQUID.get(), InkSquidRenderer::new);
+        event.registerEntityRenderer(SplatcraftEntities.INK_SQUID.get(), SplatcraftClient::createInkSquidRenderer);
         event.registerEntityRenderer(SplatcraftEntities.INK_PROJECTILE.get(), InkProjectileRenderer::new);
         event.registerEntityRenderer(SplatcraftEntities.SQUID_BUMPER.get(), SquidBumperRenderer::new);
         event.registerEntityRenderer(SplatcraftEntities.SPAWN_SHIELD.get(), SpawnShieldRenderer::new);
@@ -182,6 +193,11 @@ public final class SplatcraftClient {
         event.registerBlockEntityRenderer(SplatcraftBlockEntities.STAGE_BARRIER.get(), StageBarrierRenderer::new);
         event.registerBlockEntityRenderer(SplatcraftBlockEntities.COLOR_BARRIER.get(), StageBarrierRenderer::new);
         event.registerBlockEntityRenderer(SplatcraftBlockEntities.REMOTE_PEDESTAL.get(), RemotePedestalRenderer::new);
+    }
+
+    private static InkSquidRenderer createInkSquidRenderer(EntityRendererProvider.Context context) {
+        squidFormRenderer = new SquidFormRenderer(context);
+        return new InkSquidRenderer(context);
     }
 
     static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
@@ -515,6 +531,8 @@ public final class SplatcraftClient {
     }
 
     static void onClientTick(ClientTickEvent.Post event) {
+        // Recover the user option if a previous render frame aborted before its post event.
+        restoreBobView(Minecraft.getInstance());
         SplatcraftKeyHandler.onClientTick(event);
         updateChargerChargingSound();
         updateRollerRollSound();
@@ -598,6 +616,7 @@ public final class SplatcraftClient {
         ClientPlayerColors.clear();
         ClientStageCache.clear();
         PlayerInkColoredSkinLayer.clearTextures();
+        InkAccessoryLayer.clearResourceCache();
         stopChargerChargingSound();
         stopRollerRollSound();
         stopSplatlingChargingSound();
@@ -615,21 +634,53 @@ public final class SplatcraftClient {
 
     private static void onRenderFramePre(RenderFrameEvent.Pre event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || !shouldSuppressSquidViewEffects(minecraft.player)) {
+        try {
+            if (minecraft.player == null || !shouldSuppressSquidViewEffects(minecraft.player)) {
+                restoreBobView(minecraft);
+                return;
+            }
+
+            if (suppressedBobViewValue == null) {
+                suppressedBobViewValue = minecraft.options.bobView().get();
+            }
+            if (minecraft.options.bobView().get()) {
+                minecraft.options.bobView().set(false);
+            }
+        } catch (RuntimeException | Error exception) {
             restoreBobView(minecraft);
+            throw exception;
+        }
+    }
+
+    private static void onRenderPlayer(RenderPlayerEvent.Pre event) {
+        Player player = event.getEntity();
+        if (!SplatcraftPlayerInfoEvents.isSquid(player)) {
             return;
         }
 
-        if (suppressedBobViewValue == null) {
-            suppressedBobViewValue = minecraft.options.bobView().get();
+        SquidFormRenderer renderer = squidFormRenderer;
+        if (renderer == null) {
+            return;
         }
-        if (minecraft.options.bobView().get()) {
-            minecraft.options.bobView().set(false);
+
+        event.setCanceled(true);
+        if (!SquidInkMovement.canSquidHide(player)) {
+            renderer.render(
+                    player,
+                    player.getYHeadRot(),
+                    event.getPartialTick(),
+                    event.getPoseStack(),
+                    event.getMultiBufferSource(),
+                    event.getPackedLight());
         }
     }
 
     private static void onRenderFramePost(RenderFrameEvent.Post event) {
-        restoreBobView(Minecraft.getInstance());
+        try {
+            // The temporary option value is intentionally scoped to one rendered frame.
+        } finally {
+            restoreBobView(Minecraft.getInstance());
+        }
     }
 
     private static boolean shouldSuppressSquidViewEffects(Player player) {

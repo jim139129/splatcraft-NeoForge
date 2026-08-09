@@ -9,6 +9,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.splatcraft.neoforge.Splatcraft;
 
 public class Stage {
     public static final List<String> VALID_BOOLEAN_SETTINGS = List.of(
@@ -190,10 +191,21 @@ public class Stage {
     }
 
     private void load(CompoundTag tag) {
-        cornerA = NbtUtils.readBlockPos(tag, "CornerA").orElse(BlockPos.ZERO);
-        cornerB = NbtUtils.readBlockPos(tag, "CornerB").orElse(BlockPos.ZERO);
+        cornerA = NbtUtils.readBlockPos(tag, "CornerA").orElseGet(() -> {
+            Splatcraft.LOGGER.warn("Stage data is missing a valid CornerA; using the world origin");
+            return BlockPos.ZERO;
+        });
+        cornerB = NbtUtils.readBlockPos(tag, "CornerB").orElseGet(() -> {
+            Splatcraft.LOGGER.warn("Stage data is missing a valid CornerB; using the world origin");
+            return BlockPos.ZERO;
+        });
         ResourceLocation parsedDimension = ResourceLocation.tryParse(tag.getString("Dimension"));
-        dimension = parsedDimension == null ? Level.OVERWORLD.location() : parsedDimension;
+        if (parsedDimension == null) {
+            Splatcraft.LOGGER.warn("Stage data has an invalid dimension '{}'; using minecraft:overworld", tag.getString("Dimension"));
+            dimension = Level.OVERWORLD.location();
+        } else {
+            dimension = parsedDimension;
+        }
 
         settings.clear();
         CompoundTag settingsTag = tag.getCompound("Settings");

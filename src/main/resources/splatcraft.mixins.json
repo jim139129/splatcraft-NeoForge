@@ -4,12 +4,13 @@
   "package": "net.splatcraft.neoforge.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChunkMapAccessor",
     "EntityMixin",
-    "ObjectiveCriteriaAccessor",
     "SheepMixin",
     "SquidPassthroughMixin"
   ],
   "client": [
+    "ClientAdvancementsAccessor",
     "CreativeColorTabMixin",
     "GuiGraphicsMixin",
     "PlayerModelMixin",

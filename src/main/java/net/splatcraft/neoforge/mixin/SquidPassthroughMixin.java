@@ -29,10 +29,10 @@ public class SquidPassthroughMixin {
     ) {
         BlockBehaviour.BlockStateBase state = (BlockBehaviour.BlockStateBase) (Object) this;
         try {
-            if (state.is(SplatcraftTags.Blocks.SQUID_PASSTHROUGH)
-                    && context instanceof EntityCollisionContext entityContext
+            if (context instanceof EntityCollisionContext entityContext
                     && entityContext.getEntity() != null
-                    && SplatcraftEntityState.isSquid(entityContext.getEntity())) {
+                    && SplatcraftEntityState.isSquid(entityContext.getEntity())
+                    && state.is(SplatcraftTags.Blocks.SQUID_PASSTHROUGH)) {
                 callback.setReturnValue(Shapes.empty());
             }
         } catch (IllegalStateException ignored) {

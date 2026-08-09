@@ -7,10 +7,13 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 logoFile="pack.png"
-authors="Cibernet, NeoForge rewrite contributors"
+authors="jim139129 (NeoForge rewrite), Cibernet (original Splatcraft), contributors"
 description='''
 Splatoon-inspired blocks, items, weapons, ink systems, and arena tools for Minecraft.
 '''
+
+[[mixins]]
+config="splatcraft.mixins.json"
 
 [[dependencies.${mod_id}]]
     modId="neoforge"

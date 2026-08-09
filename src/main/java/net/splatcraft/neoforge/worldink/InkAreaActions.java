@@ -20,6 +20,9 @@ import net.splatcraft.neoforge.registry.SplatcraftBlocks;
 public final class InkAreaActions {
     public static final int SCAN_TOP_DOWN = 0;
     public static final int SCAN_MULTI_LAYERED = 1;
+    // Area commands iterate every position on the server thread; cap the volume so a mistyped
+    // coordinate cannot freeze the server. Large enough for any realistic stage (e.g. 512x64x512).
+    public static final long MAX_COMMAND_VOLUME = 16_777_216L;
 
     private InkAreaActions() {
     }
@@ -42,10 +45,10 @@ public final class InkAreaActions {
         return level.isInWorldBounds(min(from, to)) && level.isInWorldBounds(max(from, to));
     }
 
-    public static int volume(BlockPos from, BlockPos to) {
+    public static long volume(BlockPos from, BlockPos to) {
         BlockPos min = min(from, to);
         BlockPos max = max(from, to);
-        return (max.getX() - min.getX() + 1)
+        return (long) (max.getX() - min.getX() + 1)
                 * (max.getY() - min.getY() + 1)
                 * (max.getZ() - min.getZ() + 1);
     }
@@ -55,6 +58,9 @@ public final class InkAreaActions {
         BlockPos max = max(from, to);
         int affectedBlocks = 0;
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockPos immutablePos = pos.immutable();
             BlockState state = level.getBlockState(immutablePos);
             BlockEntity blockEntity = level.getBlockEntity(immutablePos);
@@ -81,6 +87,9 @@ public final class InkAreaActions {
         BlockPos max = max(from, to);
         int affectedBlocks = 0;
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockPos immutablePos = pos.immutable();
             WorldInk worldInk = WorldInkStorage.getLoaded(level, immutablePos)
                     .filter(loadedWorldInk -> loadedWorldInk.getInk(immutablePos) != null)
@@ -156,6 +165,9 @@ public final class InkAreaActions {
 
         for (int x = min.getX(); x <= max.getX(); x++) {
             for (int z = min.getZ(); z <= max.getZ(); z++) {
+                if (!level.hasChunkAt(new BlockPos(x, min.getY(), z))) {
+                    continue;
+                }
                 BlockPos pos = topScannableBlock(level, x, z, min.getY(), max.getY());
                 if (pos == null) {
                     continue;
@@ -176,6 +188,9 @@ public final class InkAreaActions {
         int scannedBlocks = 0;
 
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockPos immutablePos = pos.immutable();
             if (!isScannableTurf(level, immutablePos) || hasCover(level, immutablePos, max.getY())) {
                 continue;
@@ -320,6 +335,16 @@ public final class InkAreaActions {
         void setColor(int color);
 
         void setTeam(String team);
+
+        /**
+         * Whether this block can actually store a team. Block-entity-backed ink (color blocks,
+         * coloured barriers, remote pedestals) can; lightweight world ink cannot (its chunk format
+         * has no team field). Team commands use this so world ink is neither counted as affected by
+         * {@code teams set} nor mistaken for a team member during team-filtered replacement.
+         */
+        default boolean canHaveTeam() {
+            return true;
+        }
     }
 
     private record InkColorBlock(InkColorBlockEntity blockEntity) implements TeamInkColorBlock {
@@ -427,6 +452,11 @@ public final class InkAreaActions {
 
         @Override
         public void setTeam(String team) {
+        }
+
+        @Override
+        public boolean canHaveTeam() {
+            return false;
         }
     }
 }

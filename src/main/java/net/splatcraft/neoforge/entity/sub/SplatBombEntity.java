@@ -14,6 +14,7 @@ import net.splatcraft.neoforge.registry.SplatcraftItems;
 
 public class SplatBombEntity extends AbstractSubWeaponEntity {
     private static final int FLASH_DURATION = 10;
+    private static final int MAX_AIRBORNE_LIFETIME_TICKS = 20 * 30;
 
     private int fuseTime;
     private int previousFuseTime;
@@ -43,7 +44,7 @@ public class SplatBombEntity extends AbstractSubWeaponEntity {
 
     @Override
     protected int lifetimeTicks() {
-        return Integer.MAX_VALUE;
+        return MAX_AIRBORNE_LIFETIME_TICKS;
     }
 
     @Override

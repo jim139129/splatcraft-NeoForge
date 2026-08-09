@@ -38,6 +38,8 @@ public abstract class AbstractSubWeaponEntity extends ThrowableItemProjectile im
     protected ResourceLocation inkType = PlayerInfo.NORMAL_INK_TYPE;
     public boolean isItem = false;
     private boolean exploded;
+    @Nullable
+    private LivingEntity directHitTarget;
 
     protected AbstractSubWeaponEntity(EntityType<? extends AbstractSubWeaponEntity> entityType, Level level) {
         super(entityType, level);
@@ -177,6 +179,14 @@ public abstract class AbstractSubWeaponEntity extends ThrowableItemProjectile im
         discard();
     }
 
+    /**
+     * Marks a target already hit directly this tick so the follow-up explosion does not stack
+     * splash damage on top of the direct hit. Cleared implicitly once the entity is discarded.
+     */
+    protected void markDirectHit(LivingEntity target) {
+        this.directHitTarget = target;
+    }
+
     protected void explode() {
         if (exploded || level().isClientSide) {
             return;
@@ -198,7 +208,8 @@ public abstract class AbstractSubWeaponEntity extends ThrowableItemProjectile im
                 blockDamage,
                 minDamage,
                 maxDamage,
-                stats.fullDamageToMobs());
+                stats.fullDamageToMobs(),
+                directHitTarget);
         level().playSound(null, getX(), getY(), getZ(), SplatcraftSounds.SUB_DETONATE.get(), SoundSource.PLAYERS, 0.8F, randomPitch(0.95F));
         spawnExplosionParticle();
     }

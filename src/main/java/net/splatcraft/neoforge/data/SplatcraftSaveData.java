@@ -74,8 +74,18 @@ public class SplatcraftSaveData extends SavedData {
     }
 
     public Optional<Stage> localStage(Level level, BlockPos pos) {
-        return stages.values().stream()
-                .filter(stage -> stage.contains(level, pos))
-                .min((left, right) -> Long.compare(left.volume(), right.volume()));
+        Stage smallest = null;
+        long smallestVolume = Long.MAX_VALUE;
+        for (Stage stage : stages.values()) {
+            if (!stage.contains(level, pos)) {
+                continue;
+            }
+            long volume = stage.volume();
+            if (volume < smallestVolume) {
+                smallest = stage;
+                smallestVolume = volume;
+            }
+        }
+        return Optional.ofNullable(smallest);
     }
 }

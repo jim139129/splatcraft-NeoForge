@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
@@ -50,6 +51,10 @@ import net.splatcraft.neoforge.worldink.InkExplosion;
 
 public class WeaponItem extends Item {
     private static final int USE_DURATION = 72000;
+    private static final double ROLLER_PATH_SAMPLE_SPACING = 0.5D;
+    private static final double ROLLER_MAX_INTERPOLATION_DISTANCE = 4.0D;
+    private static final float ROLLER_PATH_YAW_SAMPLE_DEGREES = 15.0F;
+    private static final int ROLLER_MAX_PATH_SAMPLES = 8;
     private static final String HIDE_TOOLTIP_KEY = "HideTooltip";
     private static final String SPLATLING_CHARGE_KEY = "SplatlingCharge";
     private static final String SPLATLING_FIRING_TICKS_KEY = "SplatlingFiringTicks";
@@ -179,14 +184,7 @@ public class WeaponItem extends Item {
             return InteractionResultHolder.consume(stack);
         }
 
-        if (!level.isClientSide) {
-            if (!tryFire(level, player, stack, true)) {
-                return InteractionResultHolder.fail(stack);
-            }
-            playFireSound(level, player);
-        }
-
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        return InteractionResultHolder.fail(stack);
     }
 
     @Override
@@ -904,7 +902,7 @@ public class WeaponItem extends Item {
         float rollDamage = floatValue(roll, "damage", 0.0F);
         int color = weaponColor(stack, player);
         ResourceLocation inkType = SplatcraftPlayerInfoEvents.playerInfo(player).inkType();
-        RollState state = rollOnGround(level, player, rollSize, hitboxSize, rollDamage, color, inkType);
+        RollState state = rollOnGroundPath(level, player, rollSize, hitboxSize, rollDamage, color, inkType);
         if (!state.active()) {
             return;
         }
@@ -948,7 +946,7 @@ public class WeaponItem extends Item {
         return Math.max(1, startupTicks);
     }
 
-    private RollState rollOnGround(
+    private RollState rollOnGroundPath(
             Level level,
             Player player,
             int rollSize,
@@ -957,16 +955,75 @@ public class WeaponItem extends Item {
             int color,
             ResourceLocation inkType
     ) {
-        double forwardX = forwardX(player);
-        double forwardZ = forwardZ(player);
-        double sideX = sideX(player);
-        double sideZ = sideZ(player);
+        double deltaX = player.getX() - player.xo;
+        double deltaY = player.getY() - player.yo;
+        double deltaZ = player.getZ() - player.zo;
+        double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        float yawDelta = Mth.wrapDegrees(player.getYRot() - player.yRotO);
+
+        if (horizontalDistance > ROLLER_MAX_INTERPOLATION_DISTANCE
+                || Math.abs(deltaY) > ROLLER_MAX_INTERPOLATION_DISTANCE) {
+            deltaX = 0.0D;
+            deltaY = 0.0D;
+            deltaZ = 0.0D;
+            horizontalDistance = 0.0D;
+            yawDelta = 0.0F;
+        }
+
+        int movementSamples = (int) Math.ceil(horizontalDistance / ROLLER_PATH_SAMPLE_SPACING);
+        int turnSamples = (int) Math.ceil(Math.abs(yawDelta) / ROLLER_PATH_YAW_SAMPLE_DEGREES);
+        int sampleCount = Math.max(1, Math.min(ROLLER_MAX_PATH_SAMPLES, Math.max(movementSamples, turnSamples)));
+        double startX = player.getX() - deltaX;
+        double startY = player.getY() - deltaY;
+        double startZ = player.getZ() - deltaZ;
+        float startYaw = player.getYRot() - yawDelta;
+
+        boolean active = false;
+        boolean recoil = false;
+        for (int sample = 1; sample <= sampleCount; sample++) {
+            double progress = sample / (double) sampleCount;
+            boolean finalSample = sample == sampleCount;
+            RollState state = rollOnGround(
+                    level,
+                    player,
+                    Mth.lerp(progress, startX, player.getX()),
+                    Mth.lerp(progress, startY, player.getY()),
+                    Mth.lerp(progress, startZ, player.getZ()),
+                    startYaw + yawDelta * (float) progress,
+                    rollSize,
+                    finalSample ? hitboxSize : 0,
+                    finalSample ? rollDamage : 0.0F,
+                    color,
+                    inkType);
+            active |= state.active();
+            recoil |= state.recoil();
+        }
+        return new RollState(active, recoil);
+    }
+
+    private RollState rollOnGround(
+            Level level,
+            Player player,
+            double sampleX,
+            double sampleY,
+            double sampleZ,
+            float sampleYaw,
+            int rollSize,
+            int hitboxSize,
+            float rollDamage,
+            int color,
+            ResourceLocation inkType
+    ) {
+        double forwardX = forwardX(sampleYaw);
+        double forwardZ = forwardZ(sampleYaw);
+        double sideX = sideX(sampleYaw);
+        double sideZ = sideZ(sampleYaw);
         double forwardOffsetX = forwardX;
         double forwardOffsetZ = forwardZ;
         for (int distance = 1; distance <= 2; distance++) {
             forwardOffsetX = forwardX * distance;
             forwardOffsetZ = forwardZ * distance;
-            BlockPos pos = BlockPos.containing(player.getX() + forwardOffsetX, player.getY(), player.getZ() + forwardOffsetZ);
+            BlockPos pos = BlockPos.containing(sampleX + forwardOffsetX, sampleY, sampleZ + forwardOffsetZ);
             if (!InkBlockUtils.canInkPassthrough(level, pos)) {
                 break;
             }
@@ -979,9 +1036,9 @@ public class WeaponItem extends Item {
             double xOffset = sideX * offset;
             double zOffset = sideZ * offset;
             boolean hitboxColumn = index < hitboxSize;
-            active |= inkRollerColumn(level, player, color, inkType, rollDamage, xOffset, zOffset, forwardOffsetX, forwardOffsetZ, forwardX, forwardZ, hitboxColumn);
+            active |= inkRollerColumn(level, player, sampleX, sampleY, sampleZ, color, inkType, rollDamage, xOffset, zOffset, forwardOffsetX, forwardOffsetZ, forwardX, forwardZ, hitboxColumn);
             if (hitboxColumn) {
-                RollState damageState = damageRollerColumn(level, player, color, rollDamage, xOffset, zOffset, forwardOffsetX, forwardOffsetZ);
+                RollState damageState = damageRollerColumn(level, player, sampleX, sampleY, sampleZ, color, rollDamage, xOffset, zOffset, forwardOffsetX, forwardOffsetZ);
                 active |= damageState.active();
                 recoil |= damageState.recoil();
             }
@@ -992,6 +1049,9 @@ public class WeaponItem extends Item {
     private boolean inkRollerColumn(
             Level level,
             Player player,
+            double sampleX,
+            double sampleY,
+            double sampleZ,
             int color,
             ResourceLocation inkType,
             float rollDamage,
@@ -1007,9 +1067,9 @@ public class WeaponItem extends Item {
             double columnForwardX = yOffset == -3 ? fallbackForwardX : forwardOffsetX;
             double columnForwardZ = yOffset == -3 ? fallbackForwardZ : forwardOffsetZ;
             BlockPos pos = BlockPos.containing(
-                    player.getX() + xOffset + columnForwardX,
-                    player.getY() + yOffset,
-                    player.getZ() + zOffset + columnForwardZ);
+                    sampleX + xOffset + columnForwardX,
+                    sampleY + yOffset,
+                    sampleZ + zOffset + columnForwardZ);
 
             if (level.getBlockEntity(pos) instanceof ColoredBarrierBlockEntity barrier && barrier.canAllowThrough(player)) {
                 continue;
@@ -1028,7 +1088,7 @@ public class WeaponItem extends Item {
             }
 
             if (result != InkBlockUtils.InkResult.FAIL && spawnParticles) {
-                spawnRollerInkParticle(level, color, player.getX() + xOffset + columnForwardX, pos, player.getZ() + zOffset + columnForwardZ, shape);
+                spawnRollerInkParticle(level, color, sampleX + xOffset + columnForwardX, pos, sampleZ + zOffset + columnForwardZ, shape);
             }
             return result != InkBlockUtils.InkResult.FAIL;
         }
@@ -1038,6 +1098,9 @@ public class WeaponItem extends Item {
     private RollState damageRollerColumn(
             Level level,
             Player player,
+            double sampleX,
+            double sampleY,
+            double sampleZ,
             int color,
             float rollDamage,
             double xOffset,
@@ -1049,7 +1112,7 @@ public class WeaponItem extends Item {
             return RollState.INACTIVE;
         }
 
-        BlockPos attackPos = BlockPos.containing(player.getX() + xOffset + forwardOffsetX, player.getY() - 1.0D, player.getZ() + zOffset + forwardOffsetZ);
+        BlockPos attackPos = BlockPos.containing(sampleX + xOffset + forwardOffsetX, sampleY - 1.0D, sampleZ + zOffset + forwardOffsetZ);
         AABB bounds = new AABB(
                 attackPos.getX(),
                 attackPos.getY(),
@@ -1083,7 +1146,10 @@ public class WeaponItem extends Item {
 
     private static boolean isRollerMoving(Player player) {
         double horizontalMoveSqr = new Vec3(player.getX() - player.xo, 0.0D, player.getZ() - player.zo).lengthSqr();
-        return horizontalMoveSqr > 1.0E-5D || player.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5D;
+        float yawDelta = Mth.wrapDegrees(player.getYRot() - player.yRotO);
+        return horizontalMoveSqr > 1.0E-5D
+                || player.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5D
+                || Math.abs(yawDelta) > 0.01F;
     }
 
     private static boolean hasFullFootprint(VoxelShape shape) {
@@ -1139,19 +1205,27 @@ public class WeaponItem extends Item {
     }
 
     private static double forwardX(Player player) {
-        return Math.cos(Math.toRadians(player.getYRot() + 90.0F));
+        return forwardX(player.getYRot());
     }
 
     private static double forwardZ(Player player) {
-        return Math.sin(Math.toRadians(player.getYRot() + 90.0F));
+        return forwardZ(player.getYRot());
     }
 
-    private static double sideX(Player player) {
-        return Math.cos(Math.toRadians(player.getYRot()));
+    private static double forwardX(float yaw) {
+        return Math.cos(Math.toRadians(yaw + 90.0F));
     }
 
-    private static double sideZ(Player player) {
-        return Math.sin(Math.toRadians(player.getYRot()));
+    private static double forwardZ(float yaw) {
+        return Math.sin(Math.toRadians(yaw + 90.0F));
+    }
+
+    private static double sideX(float yaw) {
+        return Math.cos(Math.toRadians(yaw));
+    }
+
+    private static double sideZ(float yaw) {
+        return Math.sin(Math.toRadians(yaw));
     }
 
     private float rollerProjectileSpeed(boolean airborne, JsonObject action, boolean brush) {

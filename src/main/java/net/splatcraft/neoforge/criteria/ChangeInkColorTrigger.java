@@ -8,8 +8,10 @@ import java.util.Optional;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
 import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.splatcraft.neoforge.Splatcraft;
 
 public class ChangeInkColorTrigger extends SimpleCriterionTrigger<ChangeInkColorTrigger.TriggerInstance> {
     @Override
@@ -58,7 +60,7 @@ public class ChangeInkColorTrigger extends SimpleCriterionTrigger<ChangeInkColor
 
         private static ColorValue fromString(String value) {
             Optional<Integer> rgb = parseHexColor(value);
-            return new ColorValue(Optional.of(value), rgb);
+            return new ColorValue(Optional.of(normalizeColorId(value)), rgb);
         }
 
         private static ColorValue fromInt(int value) {
@@ -66,7 +68,7 @@ public class ChangeInkColorTrigger extends SimpleCriterionTrigger<ChangeInkColor
         }
 
         public boolean matches(String colorId) {
-            if (this.id.isPresent() && this.id.get().equals(colorId)) {
+            if (this.id.isPresent() && this.id.get().equals(normalizeColorId(colorId))) {
                 return true;
             }
 
@@ -93,6 +95,15 @@ public class ChangeInkColorTrigger extends SimpleCriterionTrigger<ChangeInkColor
             }
 
             return Optional.of(Integer.parseInt(hex.toLowerCase(Locale.ROOT), 16));
+        }
+
+        private static String normalizeColorId(String value) {
+            String normalized = value.trim();
+            String candidate = !normalized.startsWith("#") && !normalized.contains(":")
+                    ? Splatcraft.MOD_ID + ":" + normalized
+                    : normalized;
+            ResourceLocation parsed = ResourceLocation.tryParse(candidate);
+            return parsed == null ? normalized : parsed.toString();
         }
     }
 }

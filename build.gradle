@@ -674,7 +674,6 @@ tasks.register('validateSplatcraftResources') {
         [
                 '"Color"',
                 '"IsSquid"',
-                '"InkType"',
                 '"Initialized"',
                 '"InkBand"'
         ].each { tagName ->

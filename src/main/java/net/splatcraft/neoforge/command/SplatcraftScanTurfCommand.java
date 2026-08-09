@@ -129,6 +129,10 @@ public final class SplatcraftScanTurfCommand {
             source.sendSuccess(() -> Component.translatable("status.scan_turf.out_of_world"), true);
             return 0;
         }
+        if (!InkAreaOperations.withinVolumeLimit(from, to)) {
+            source.sendFailure(Component.translatable("status.area_command.too_large"));
+            return 0;
+        }
 
         InkAreaActions.TurfScanResult result = InkAreaActions.scanTurf(
                 level,
@@ -142,7 +146,7 @@ public final class SplatcraftScanTurfCommand {
 
         int winner = result.winner();
         sendResults(targets, result);
-        updatePlayers(level, targets, result, winner);
+        updatePlayers(level, targets, result, winner, stage);
         if (stage != null) {
             updateStageTeams(level, stage, winner);
         }
@@ -175,10 +179,14 @@ public final class SplatcraftScanTurfCommand {
             ServerLevel level,
             Collection<ServerPlayer> targets,
             InkAreaActions.TurfScanResult result,
-            int winner) {
+            int winner,
+            Stage stage) {
         Collection<ServerPlayer> players = targets.isEmpty() ? level.players() : targets;
         for (ServerPlayer player : players) {
             int playerColor = SplatcraftPlayerInfoEvents.color(player);
+            if (stage != null && !stage.teams().containsValue(playerColor)) {
+                continue;
+            }
             int score = result.scores().getOrDefault(playerColor, 0);
             SplatcraftCriteriaTriggers.SCAN_TURF.get().trigger(player, score, playerColor == winner);
             SplatcraftScoreboardHandler.updatePlayerScore(SplatcraftScoreboardHandler.TURF_WAR_SCORE, player, score);

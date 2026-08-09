@@ -4,15 +4,18 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 public final class InkExplosion {
     private InkExplosion() {
@@ -30,6 +33,28 @@ public final class InkExplosion {
             float minDamage,
             float maxDamage,
             boolean fullDamageToMobs) {
+        return create(level, source, directSource, center, radius, color, inkType,
+                blockDamage, minDamage, maxDamage, fullDamageToMobs, null);
+    }
+
+    /**
+     * @param excludedFromDamage entity already damaged by a direct hit this tick; excluded from the
+     *                           splash pass so a projectile can't stack direct + explosion damage on
+     *                           the same target in one tick.
+     */
+    public static int create(
+            Level level,
+            @Nullable Entity source,
+            @Nullable Entity directSource,
+            Vec3 center,
+            float radius,
+            int color,
+            net.minecraft.resources.ResourceLocation inkType,
+            float blockDamage,
+            float minDamage,
+            float maxDamage,
+            boolean fullDamageToMobs,
+            @Nullable Entity excludedFromDamage) {
         if (level.isClientSide || radius <= 0.0F) {
             return 0;
         }
@@ -44,29 +69,40 @@ public final class InkExplosion {
                 count++;
             }
         }
-        damageEntities(level, source, directSource, center, radius, color, minDamage, maxDamage, fullDamageToMobs);
+        damageEntities(level, source, directSource, excludedFromDamage, center, radius, color, minDamage, maxDamage, fullDamageToMobs);
         return count;
     }
 
+    /**
+     * Casts rays from the center to a 16x16x16 shell of directions, like vanilla explosions and
+     * the original 1.18 implementation. Only the first collider hit by each ray can be inked, so
+     * walls block ink and fully enclosed blocks are never painted. A plain sphere sweep here
+     * previously inked through walls and flooded chunk storage with invisible entries.
+     */
     private static Set<BlockPos> collectAffectedBlocks(Level level, Vec3 center, float radius) {
         Set<BlockPos> affected = new HashSet<>();
-        int minX = Mth.floor(center.x - radius);
-        int maxX = Mth.floor(center.x + radius);
-        int minY = Mth.floor(center.y - radius);
-        int maxY = Mth.floor(center.y + radius);
-        int minZ = Mth.floor(center.z - radius);
-        int maxZ = Mth.floor(center.z + radius);
-        double radiusSqr = radius * radius;
-
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    if (center.distanceToSqr(Vec3.atCenterOf(pos)) > radiusSqr) {
+        for (int j = 0; j < 16; j++) {
+            for (int k = 0; k < 16; k++) {
+                for (int l = 0; l < 16; l++) {
+                    if (j != 0 && j != 15 && k != 0 && k != 15 && l != 0 && l != 15) {
                         continue;
                     }
-                    if (canReachInkableFace(level, pos)) {
-                        affected.add(pos);
+
+                    double dirX = j / 15.0D * 2.0D - 1.0D;
+                    double dirY = k / 15.0D * 2.0D - 1.0D;
+                    double dirZ = l / 15.0D * 2.0D - 1.0D;
+                    double length = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+                    float strength = radius * (0.7F + level.getRandom().nextFloat() * 0.6F);
+                    Vec3 end = center.add(
+                            dirX / length * strength,
+                            dirY / length * strength,
+                            dirZ / length * strength);
+
+                    BlockHitResult hit = level.clip(new ClipContext(
+                            center, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+                    if (hit.getType() != HitResult.Type.MISS
+                            && InkBlockUtils.canInkFromFace(level, hit.getBlockPos(), hit.getDirection())) {
+                        affected.add(hit.getBlockPos());
                     }
                 }
             }
@@ -74,19 +110,11 @@ public final class InkExplosion {
         return affected;
     }
 
-    private static boolean canReachInkableFace(Level level, BlockPos pos) {
-        for (Direction direction : Direction.values()) {
-            if (InkBlockUtils.canInkFromFace(level, pos, direction)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static void damageEntities(
             Level level,
             @Nullable Entity source,
             @Nullable Entity directSource,
+            @Nullable Entity excludedFromDamage,
             Vec3 center,
             float radius,
             int color,
@@ -108,7 +136,7 @@ public final class InkExplosion {
                 center.z + damageRadius
         );
         double damageRadiusSqr = damageRadius * damageRadius;
-        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, bounds, target -> canHitTarget(target, source, directSource))) {
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, bounds, target -> canHitTarget(target, source, directSource, excludedFromDamage))) {
             double distanceSqr = target.distanceToSqr(center);
             if (distanceSqr > damageRadiusSqr) {
                 continue;
@@ -121,10 +149,11 @@ public final class InkExplosion {
         }
     }
 
-    private static boolean canHitTarget(LivingEntity target, @Nullable Entity source, @Nullable Entity directSource) {
+    private static boolean canHitTarget(LivingEntity target, @Nullable Entity source, @Nullable Entity directSource, @Nullable Entity excludedFromDamage) {
         return target.isAlive()
                 && !target.isSpectator()
                 && target != source
-                && target != directSource;
+                && target != directSource
+                && target != excludedFromDamage;
     }
 }

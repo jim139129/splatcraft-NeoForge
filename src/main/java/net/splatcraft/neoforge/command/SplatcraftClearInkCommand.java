@@ -58,6 +58,10 @@ public final class SplatcraftClearInkCommand {
             source.sendSuccess(() -> Component.translatable("status.clear_ink.out_of_world"), true);
             return 0;
         }
+        if (!InkAreaOperations.withinVolumeLimit(from, to)) {
+            source.sendFailure(Component.translatable("status.area_command.too_large"));
+            return 0;
+        }
 
         int count = InkAreaOperations.clearInk(level, from, to);
         if (count > 0) {

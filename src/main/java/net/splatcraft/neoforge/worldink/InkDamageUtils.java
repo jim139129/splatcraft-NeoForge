@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.splatcraft.neoforge.data.InkOverlayInfo;
+import net.splatcraft.neoforge.entity.SquidBumperEntity;
 import net.splatcraft.neoforge.entity.ColoredEntity;
 import net.splatcraft.neoforge.entity.SpawnShieldEntity;
 import net.splatcraft.neoforge.player.SplatcraftPlayerInfoEvents;
@@ -67,8 +68,10 @@ public final class InkDamageUtils {
         }
 
         BlockPos pos = target.blockPosition();
-        InkOverlayInfo overlay = target.getData(SplatcraftAttachments.INK_OVERLAY.get());
-        if (overlay.inkproof()) {
+        InkOverlayInfo overlay = target instanceof SquidBumperEntity
+                ? null
+                : target.getData(SplatcraftAttachments.INK_OVERLAY.get());
+        if (overlay != null && overlay.inkproof()) {
             return false;
         }
 
@@ -91,14 +94,19 @@ public final class InkDamageUtils {
             effectiveDamage *= mobDamageScale;
         }
 
-        applyInkOverlay(target, overlay, color, damage, mobDamageScale, fullDamageToMobs);
+        if (overlay != null) {
+            applyInkOverlay(target, overlay, color, damage, mobDamageScale, fullDamageToMobs);
+        }
         if (effectiveDamage <= 0.0F) {
             return false;
         }
 
         boolean bypassDamageCooldown = !applyHurtCooldown
                 && !SplatcraftGameRules.localizedBoolean(level, pos, SplatcraftGameRules.INK_DAMAGE_COOLDOWN);
-        if (bypassDamageCooldown) {
+        // Match the 1.18 behavior: only colored entities (squid bumpers etc.) lose their
+        // invulnerability frames. Players and mobs keep vanilla hurt cooldown, otherwise
+        // rapid-fire weapons apply full damage every projectile.
+        if (bypassDamageCooldown && target instanceof ColoredEntity) {
             target.invulnerableTime = 0;
         }
 

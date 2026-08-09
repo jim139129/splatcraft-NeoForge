@@ -69,12 +69,17 @@ public final class SplatcraftSuperJumpCommand {
 
     private static int jumpToEntity(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         Entity target = EntityArgument.getEntity(context, "target");
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        if (target.level() != player.level()) {
+            context.getSource().sendFailure(Component.translatable("commands.superjump.cross_dimension"));
+            return 0;
+        }
         return execute(context, target.position());
     }
 
     private static int execute(CommandContext<CommandSourceStack> context, Vec3 target) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
-        SuperJump jump = new SuperJump(target, player.position(), player.noPhysics);
+        SuperJump jump = new SuperJump(target, player.position());
         ACTIVE_JUMPS.put(player.getUUID(), jump);
         player.displayClientMessage(Component.literal("pchoooooo"), false);
         return 1;
@@ -95,7 +100,6 @@ public final class SplatcraftSuperJumpCommand {
         jump.setDistanceLeft(distanceLeft);
         player.stopFallFlying();
         player.getAbilities().flying = false;
-        player.noPhysics = true;
         player.fallDistance = 0.0F;
 
         double distancePercent = jump.distance() <= 0.0D ? 0.0D : distanceLeft / jump.distance();
@@ -124,7 +128,6 @@ public final class SplatcraftSuperJumpCommand {
             return;
         }
 
-        player.noPhysics = jump.originalNoPhysics();
         if (SplatcraftPlayerInfoEvents.isSquid(player)) {
             SplatcraftPlayerInfoEvents.setSquid(player, false);
         }
@@ -145,13 +148,11 @@ public final class SplatcraftSuperJumpCommand {
     private static final class SuperJump {
         private final Vec3 target;
         private final double distance;
-        private final boolean originalNoPhysics;
         private double distanceLeft;
 
-        private SuperJump(Vec3 target, Vec3 from, boolean originalNoPhysics) {
+        private SuperJump(Vec3 target, Vec3 from) {
             this.target = target;
             this.distance = horizontalDistance(target, from);
-            this.originalNoPhysics = originalNoPhysics;
             this.distanceLeft = distance;
         }
 
@@ -161,10 +162,6 @@ public final class SplatcraftSuperJumpCommand {
 
         private double distance() {
             return distance;
-        }
-
-        private boolean originalNoPhysics() {
-            return originalNoPhysics;
         }
 
         private double distanceLeft() {

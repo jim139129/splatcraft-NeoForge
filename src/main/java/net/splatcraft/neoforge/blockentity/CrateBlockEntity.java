@@ -173,7 +173,6 @@ public class CrateBlockEntity extends InkColorBlockEntity implements Container {
 
     public int stateIndex() {
         if (health >= maxHealth) {
-            setColor(-1);
             return 0;
         }
         int state = 4 - Math.round(health * 4.0F / maxHealth);

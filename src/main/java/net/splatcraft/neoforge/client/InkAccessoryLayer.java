@@ -2,6 +2,8 @@ package net.splatcraft.neoforge.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
@@ -22,6 +24,8 @@ import net.splatcraft.neoforge.player.PlayerInfo;
 import net.splatcraft.neoforge.player.SplatcraftPlayerInfoEvents;
 
 public class InkAccessoryLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
+    private static final Map<ResourceLocation, Boolean> RESOURCE_CACHE = new HashMap<>();
+
     private final HumanoidModel<AbstractClientPlayer> model;
 
     public InkAccessoryLayer(
@@ -99,7 +103,13 @@ public class InkAccessoryLayer extends RenderLayer<AbstractClientPlayer, PlayerM
     }
 
     private static boolean hasResource(ResourceLocation location) {
-        return Minecraft.getInstance().getResourceManager().getResource(location).isPresent();
+        return RESOURCE_CACHE.computeIfAbsent(
+                location,
+                resource -> Minecraft.getInstance().getResourceManager().getResource(resource).isPresent());
+    }
+
+    static void clearResourceCache() {
+        RESOURCE_CACHE.clear();
     }
 
     private void renderModel(

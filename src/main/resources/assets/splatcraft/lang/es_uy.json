@@ -533,6 +533,7 @@
   "status.clear_ink.success": "Se limpiaron %s bloques exitosamente",
   "status.change_color.out_of_world": "§cNo se pueden revisar bloques por fuera del mundo",
   "status.change_color.success": "Se recoloraron %s bloques a %s exitosamente",
+  "status.area_command.too_large": "§cEl área seleccionada es demasiado grande",
   "status.blueprint.invalid": "This Blueprint is empty.",
   "status.blueprint.already_unlocked.single": "You already have this Blueprint.",
   "status.blueprint.already_unlocked": "You already completed this Blueprint set.",
@@ -578,5 +579,6 @@
   "key.subWeaponHotkey": "Arma secundaria tecla directa",
   "key.specialWeaponHotkey": "Arma especial tecla directa",
   "attribute.splatcraft.ink_swim_speed": "Velocidad extra al nadar en tinta",
-  "disconnect.lost": "A communication error occurred"
+  "disconnect.lost": "A communication error occurred",
+  "commands.superjump.cross_dimension": "§cEl objetivo debe estar en la misma dimensión"
 }

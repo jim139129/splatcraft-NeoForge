@@ -54,8 +54,9 @@ public class PlayerInkColoredSkinLayer extends RenderLayer<AbstractClientPlayer,
             return;
         }
 
-        try (InputStream inputStream = Files.newInputStream(path)) {
-            byte[] imageBytes = NativeImage.read(inputStream).asByteArray();
+        try (InputStream inputStream = Files.newInputStream(path);
+                NativeImage image = NativeImage.read(inputStream)) {
+            byte[] imageBytes = image.asByteArray();
             if (imageBytes.length > PlayerSkinOverlayPayload.MAX_IMAGE_BYTES) {
                 Splatcraft.LOGGER.warn("Player ink skin overlay {} is too large: {} bytes", path, imageBytes.length);
                 return;
@@ -77,7 +78,17 @@ public class PlayerInkColoredSkinLayer extends RenderLayer<AbstractClientPlayer,
         }
 
         try {
-            DynamicTexture texture = new DynamicTexture(NativeImage.read(new ByteArrayInputStream(imageBytes)));
+            NativeImage image = NativeImage.read(new ByteArrayInputStream(imageBytes));
+            // The server validates dimensions before broadcasting, but don't trust it: a modified
+            // server could still push a decompression bomb that allocates a huge texture.
+            if (image.getWidth() > PlayerSkinOverlayPayload.MAX_IMAGE_DIMENSION
+                    || image.getHeight() > PlayerSkinOverlayPayload.MAX_IMAGE_DIMENSION) {
+                Splatcraft.LOGGER.warn("Rejected oversized ink skin overlay for {}: {}x{}",
+                        playerId, image.getWidth(), image.getHeight());
+                image.close();
+                return;
+            }
+            DynamicTexture texture = new DynamicTexture(image);
             minecraft.getTextureManager().register(location, texture);
             TEXTURES.put(playerId, location);
         } catch (IOException exception) {

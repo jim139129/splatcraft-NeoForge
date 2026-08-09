@@ -125,9 +125,19 @@ public final class SplatcraftGameRules {
 
     private static Optional<Stage> localStage(Level level, BlockPos pos) {
         if (level.isClientSide) {
-            return ClientStageCache.stages().values().stream()
-                    .filter(stage -> stage.contains(level, pos))
-                    .min((left, right) -> Long.compare(left.volume(), right.volume()));
+            Stage smallest = null;
+            long smallestVolume = Long.MAX_VALUE;
+            for (Stage stage : ClientStageCache.stages().values()) {
+                if (!stage.contains(level, pos)) {
+                    continue;
+                }
+                long volume = stage.volume();
+                if (volume < smallestVolume) {
+                    smallest = stage;
+                    smallestVolume = volume;
+                }
+            }
+            return Optional.ofNullable(smallest);
         }
         return SplatcraftSaveData.get(level).flatMap(data -> data.localStage(level, pos));
     }

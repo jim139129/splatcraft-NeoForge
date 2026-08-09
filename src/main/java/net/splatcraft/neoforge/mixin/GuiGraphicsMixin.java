@@ -1,6 +1,8 @@
 package net.splatcraft.neoforge.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemRenderer;
@@ -10,11 +12,10 @@ import net.minecraft.world.item.ItemStack;
 import net.splatcraft.neoforge.registry.SplatcraftItems;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(GuiGraphics.class)
 public class GuiGraphicsMixin {
-    @Redirect(
+    @WrapOperation(
             method = "renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;IIII)V",
             at = @At(
                     value = "INVOKE",
@@ -30,9 +31,11 @@ public class GuiGraphicsMixin {
             MultiBufferSource bufferSource,
             int combinedLight,
             int combinedOverlay,
-            BakedModel model
+            BakedModel model,
+        Operation<Void> original
     ) {
-        renderer.render(
+        original.call(
+                renderer,
                 stack,
                 displayContext,
                 leftHand || stack.is(SplatcraftItems.POWER_EGG.get()),

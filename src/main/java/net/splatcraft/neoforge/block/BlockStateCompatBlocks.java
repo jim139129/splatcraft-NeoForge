@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
@@ -668,12 +669,17 @@ public final class BlockStateCompatBlocks {
         ) {
             if (!level.isClientSide()
                     && state.getValue(INKED)
-                    && level instanceof Level actualLevel
                     && isTouchingInkClearingFluid(level, currentPos)) {
-                clear(actualLevel, currentPos, state);
-                return actualLevel.getBlockState(currentPos);
+                level.scheduleTick(currentPos, this, 1);
             }
             return super.updateShape(state, direction, neighborState, level, currentPos, neighborPos);
+        }
+
+        @Override
+        protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+            if (state.getValue(INKED) && isTouchingInkClearingFluid(level, pos)) {
+                clear(level, pos, state);
+            }
         }
 
         public static net.splatcraft.neoforge.worldink.InkBlockUtils.InkResult ink(Level level, BlockPos pos, int color) {
@@ -820,7 +826,7 @@ public final class BlockStateCompatBlocks {
             net.minecraft.resources.ResourceLocation inkType = inkType(state);
             net.minecraft.resources.ResourceLocation permanentInkType = inkedBlock.getPermanentInkType();
 
-            level.setBlock(pos, savedState, 2);
+            level.setBlock(pos, savedState, 3);
             if (permanentColor != -1) {
                 WorldInkStorage.setPermanentInk(level, pos, permanentColor, permanentInkType);
             }
@@ -1554,12 +1560,24 @@ public final class BlockStateCompatBlocks {
         public void playerDestroy(Level level, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack stack) {
             player.awardStat(net.minecraft.stats.Stats.BLOCK_MINED.get(this));
             player.causeFoodExhaustion(0.005F);
+            dropResources(state, level, pos, blockEntity, player, stack);
+        }
 
+        @Override
+        public java.util.List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
+            java.util.List<ItemStack> drops = super.getDrops(state, builder);
+            int faceCount = 0;
             for (Direction direction : Direction.values()) {
                 if (state.getValue(PipeBlock.PROPERTY_BY_DIRECTION.get(direction))) {
-                    dropResources(state, level, pos, blockEntity, player, stack);
+                    faceCount++;
                 }
             }
+            if (faceCount > 1) {
+                for (ItemStack drop : drops) {
+                    drop.setCount(drop.getCount() * faceCount);
+                }
+            }
+            return drops;
         }
 
         @Override
@@ -1753,6 +1771,7 @@ public final class BlockStateCompatBlocks {
         @Override
         protected void onRemove(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
             if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof InkVatBlockEntity inkVat) {
+                inkVat.clearPreviewOutput();
                 net.minecraft.world.Containers.dropContents(level, pos, inkVat);
                 level.updateNeighbourForOutputSignal(pos, this);
             }
@@ -2059,6 +2078,17 @@ public final class BlockStateCompatBlocks {
                 }
             }
             return super.playerWillDestroy(level, pos, state, player);
+        }
+
+        @Override
+        protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+            if (!level.isClientSide && !state.is(newState.getBlock())) {
+                BlockPos parentPos = spawnPadParent(level, pos);
+                if (parentPos != null) {
+                    level.destroyBlock(parentPos, false);
+                }
+            }
+            super.onRemove(state, level, pos, newState, movedByPiston);
         }
 
         @Override
@@ -2460,12 +2490,18 @@ public final class BlockStateCompatBlocks {
                 BlockPos neighborPos
         ) {
             scheduleWaterTick(state, level, currentPos);
-            if (!level.isClientSide() && state.getValue(POWERED) && level instanceof Level actualLevel
+            if (!level.isClientSide() && state.getValue(POWERED)
                     && isTouchingInkClearingFluid(level, currentPos)) {
-                deactivate(actualLevel, currentPos);
-                return actualLevel.getBlockState(currentPos);
+                level.scheduleTick(currentPos, this, 1);
             }
             return super.updateShape(state, direction, neighborState, level, currentPos, neighborPos);
+        }
+
+        @Override
+        protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+            if (state.getValue(POWERED) && isTouchingInkClearingFluid(level, pos)) {
+                deactivate(level, pos);
+            }
         }
 
         @Override
@@ -2609,6 +2645,9 @@ public final class BlockStateCompatBlocks {
 
         private static void tickStageVoid(Level level, BlockPos pos, StageBarrierBlockEntity barrier) {
             barrier.tickActiveTime();
+            if (level.isClientSide) {
+                return;
+            }
             for (Entity entity : level.getEntitiesOfClass(Entity.class, new AABB(pos))) {
                 handleStageVoidEntity(level, pos, barrier, entity);
             }
@@ -2643,7 +2682,7 @@ public final class BlockStateCompatBlocks {
                 if (!level.isClientSide) {
                     player.hurt(player.damageSources().source(SplatcraftDamageTypes.OUT_OF_STAGE), Float.MAX_VALUE);
                 }
-            } else {
+            } else if (!level.isClientSide) {
                 entity.discard();
             }
         }

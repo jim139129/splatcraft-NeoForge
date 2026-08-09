@@ -25,12 +25,15 @@ public class InkDisruptorItem extends RemoteItem {
         if (!InkAreaActions.inWorldBounds(level, pointA, pointB)) {
             return RemoteResult.fail(Component.translatable("status.clear_ink.out_of_world"));
         }
+        if (InkAreaActions.volume(pointA, pointB) > InkAreaActions.MAX_COMMAND_VOLUME) {
+            return RemoteResult.fail(Component.translatable("status.area_command.too_large"));
+        }
 
         int count = InkAreaActions.clearInk(level, pointA, pointB);
-        int volume = Math.max(1, InkAreaActions.volume(pointA, pointB));
+        long volume = Math.max(1L, InkAreaActions.volume(pointA, pointB));
         return RemoteResult.success(
                 Component.translatable("status.clear_ink." + (count > 0 ? "success" : "no_ink"), count),
                 count,
-                count * 15 / volume);
+                (int) (count * 15L / volume));
     }
 }

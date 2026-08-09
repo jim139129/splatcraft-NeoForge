@@ -533,6 +533,7 @@
   "status.clear_ink.success": " %s blocs ont été éffacé avec succès",
   "status.change_color.out_of_world": "§cImpossible de recolorer l'encre en dehors du monde",
   "status.change_color.success": "%s blocs à %s recoloré avec succès",
+  "status.area_command.too_large": "§cLa zone sélectionnée est trop grande",
   "status.blueprint.invalid": "This Blueprint is empty.",
   "status.blueprint.already_unlocked.single": "You already have this Blueprint.",
   "status.blueprint.already_unlocked": "You already completed this Blueprint set.",
@@ -578,5 +579,6 @@
   "key.subWeaponHotkey": "Sub Weapon Hotkey",
   "key.specialWeaponHotkey": "Special Weapon Hotkey",
   "attribute.splatcraft.ink_swim_speed": "Bonus turbo-calamar",
-  "disconnect.lost": "A communication error occurred"
+  "disconnect.lost": "A communication error occurred",
+  "commands.superjump.cross_dimension": "§cLa cible doit être dans la même dimension"
 }

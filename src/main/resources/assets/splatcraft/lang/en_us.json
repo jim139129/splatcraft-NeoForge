@@ -579,6 +579,7 @@
   "status.clear_ink.success": "Successfully cleared %s blocks",
   "status.change_color.out_of_world": "§cCannot clear ink outside of the world",
   "status.change_color.success": "Successfully recolored %s blocks to %s",
+  "status.area_command.too_large": "§cThe selected area is too large",
 
   "status.blueprint.invalid": "This Blueprint is empty.",
   "status.blueprint.already_unlocked.single": "You already have this Blueprint.",
@@ -632,6 +633,6 @@
 
   "attribute.splatcraft.ink_swim_speed": "Ink Swim Speed Bonus",
 
-  "disconnect.lost": "A communication error occurred"
+  "disconnect.lost": "A communication error occurred",
+  "commands.superjump.cross_dimension": "§cTarget must be in the same dimension"
 }
-

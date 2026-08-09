@@ -197,7 +197,10 @@ public class InkProjectileEntity extends ThrowableItemProjectile implements Colo
         age++;
 
         if (isInWater()) {
-            discard();
+            if (!level().isClientSide) {
+                level().broadcastEntityEvent(this, (byte) -1);
+                discard();
+            }
             return;
         }
 
@@ -636,23 +639,20 @@ public class InkProjectileEntity extends ThrowableItemProjectile implements Colo
     }
 
     private Optional<Number> rawProjectileNumber(String key) {
-        return rawNumber(projectileObject(), key);
-    }
-
-    private JsonObject projectileObject() {
         JsonObject raw = settings().raw();
-        JsonObject projectile = object(raw, "projectile").deepCopy();
         if (isSplatlingProjectile()) {
-            for (var entry : object(raw, "second_charge_projectile").entrySet()) {
-                projectile.add(entry.getKey(), entry.getValue());
+            Optional<Number> override = rawNumber(object(raw, "second_charge_projectile"), key);
+            if (override.isPresent()) {
+                return override;
             }
         }
         if (isDualieTurretProjectile()) {
-            for (var entry : object(raw, "turret_projectile").entrySet()) {
-                projectile.add(entry.getKey(), entry.getValue());
+            Optional<Number> override = rawNumber(object(raw, "turret_projectile"), key);
+            if (override.isPresent()) {
+                return override;
             }
         }
-        return projectile;
+        return rawNumber(object(raw, "projectile"), key);
     }
 
     private static Optional<Number> rawNumber(JsonObject object, String key) {

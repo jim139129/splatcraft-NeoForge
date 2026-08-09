@@ -13,10 +13,10 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
 import net.splatcraft.neoforge.Splatcraft;
-import net.splatcraft.neoforge.entity.InkSquidEntity;
 
-public class InkSquidModel extends EntityModel<InkSquidEntity> {
+public class InkSquidModel<T extends LivingEntity> extends EntityModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(
             ResourceLocation.fromNamespaceAndPath(Splatcraft.MOD_ID, "ink_squid"),
             "main");
@@ -73,11 +73,11 @@ public class InkSquidModel extends EntityModel<InkSquidEntity> {
     }
 
     @Override
-    public void setupAnim(InkSquidEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
     }
 
     @Override
-    public void prepareMobModel(InkSquidEntity entity, float limbSwing, float limbSwingAmount, float partialTick) {
+    public void prepareMobModel(T entity, float limbSwing, float limbSwingAmount, float partialTick) {
         super.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTick);
 
         boolean swimming = entity.isSwimming();
@@ -93,7 +93,7 @@ public class InkSquidModel extends EntityModel<InkSquidEntity> {
     }
 
     @Override
-    public void copyPropertiesTo(EntityModel<InkSquidEntity> model) {
+    public void copyPropertiesTo(EntityModel<T> model) {
         super.copyPropertiesTo(model);
         if (model instanceof InkSquidModel inkSquidModel) {
             inkSquidModel.squid.copyFrom(squid);

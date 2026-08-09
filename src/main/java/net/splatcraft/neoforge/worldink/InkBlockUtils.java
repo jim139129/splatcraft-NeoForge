@@ -43,6 +43,9 @@ public final class InkBlockUtils {
         if (level.isClientSide) {
             return InkResult.FAIL;
         }
+        if (isUninkable(level, pos)) {
+            return InkResult.FAIL;
+        }
         if (blockedBySpawnShield(level, pos, color)) {
             return InkResult.FAIL;
         }
@@ -54,10 +57,6 @@ public final class InkBlockUtils {
         }
         if (level.getBlockEntity(pos) instanceof CrateBlockEntity crate) {
             crate.ink(color, blockDamage);
-            return InkResult.FAIL;
-        }
-        if (isUninkable(level, pos)) {
-            return InkResult.FAIL;
         }
         if (!SplatcraftGameRules.localizedBoolean(level, pos, SplatcraftGameRules.INKABLE_GROUND)) {
             return InkResult.FAIL;
@@ -69,7 +68,9 @@ public final class InkBlockUtils {
         }
 
         boolean sameColor = current != null && current.color() == color;
-        WorldInkStorage.ink(level, pos, color, inkType);
+        if (!WorldInkStorage.ink(level, pos, color, inkType)) {
+            return InkResult.FAIL;
+        }
         destroyFoliageAbove(level, pos);
         sendBlockUpdate(level, pos);
         return sameColor ? InkResult.ALREADY_INKED : InkResult.SUCCESS;

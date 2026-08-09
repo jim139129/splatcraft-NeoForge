@@ -17,6 +17,8 @@ import net.splatcraft.neoforge.worldink.WorldInkStorage;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record WorldInkPayload(ChunkPos chunkPos, Map<BlockPos, WorldInk.Entry> ink, boolean replace) implements CustomPacketPayload {
+    // A chunk cannot hold more ink entries than block positions (16x16x384).
+    public static final int MAX_ENTRIES = 16 * 16 * 384;
     public static final CustomPacketPayload.Type<WorldInkPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Splatcraft.MOD_ID, "world_ink"));
     public static final StreamCodec<RegistryFriendlyByteBuf, WorldInkPayload> STREAM_CODEC = StreamCodec.of(
@@ -67,6 +69,9 @@ public record WorldInkPayload(ChunkPos chunkPos, Map<BlockPos, WorldInk.Entry> i
         ChunkPos chunkPos = new ChunkPos(buffer.readInt(), buffer.readInt());
         boolean replace = buffer.readBoolean();
         int size = buffer.readVarInt();
+        if (size < 0 || size > MAX_ENTRIES) {
+            throw new IllegalArgumentException("World ink payload entry count out of range: " + size);
+        }
         Map<BlockPos, WorldInk.Entry> ink = new LinkedHashMap<>();
         for (int index = 0; index < size; index++) {
             BlockPos pos = buffer.readBlockPos();

@@ -143,6 +143,10 @@ public final class SplatcraftReplaceColorCommand {
             source.sendSuccess(() -> Component.translatable("status.change_color.out_of_world"), true);
             return 0;
         }
+        if (!InkAreaOperations.withinVolumeLimit(from, to)) {
+            source.sendFailure(Component.translatable("status.area_command.too_large"));
+            return 0;
+        }
 
         int count = InkAreaOperations.visitColorBlocks(level, from, to, block -> {
             if (block.color() == color || !target.matches(block)) {
@@ -171,8 +175,9 @@ public final class SplatcraftReplaceColorCommand {
         boolean matches(InkAreaOperations.TeamInkColorBlock block) {
             return switch (mode) {
                 case ALL -> true;
-                case ONLY -> team.isEmpty() ? block.color() == color : block.team().equals(team);
-                case KEEP -> team.isEmpty() ? block.color() != color : !block.team().equals(team);
+                // A teamless block (world ink) is never in the filtered team: ONLY skips it, KEEP replaces it.
+                case ONLY -> team.isEmpty() ? block.color() == color : block.canHaveTeam() && block.team().equals(team);
+                case KEEP -> team.isEmpty() ? block.color() != color : !block.canHaveTeam() || !block.team().equals(team);
             };
         }
     }

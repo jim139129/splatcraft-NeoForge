@@ -47,7 +47,10 @@ public class SquidBumperItem extends Item {
     public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         if (!level.isClientSide && entity instanceof Player player && !InkColorComponent.isColorLocked(stack)) {
-            InkColorComponent.setColor(stack, SplatcraftPlayerInfoEvents.color(player));
+            int color = SplatcraftPlayerInfoEvents.color(player);
+            if (InkColorComponent.color(stack).orElse(-1) != color) {
+                InkColorComponent.setColor(stack, color);
+            }
         }
     }
 

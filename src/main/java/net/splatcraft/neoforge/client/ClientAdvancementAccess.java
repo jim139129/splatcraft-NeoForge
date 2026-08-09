@@ -1,17 +1,14 @@
 package net.splatcraft.neoforge.client;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientAdvancements;
 import net.minecraft.resources.ResourceLocation;
+import net.splatcraft.neoforge.mixin.ClientAdvancementsAccessor;
 
 final class ClientAdvancementAccess {
-    private static Field progressField;
-    private static boolean progressFieldResolved;
-
     private ClientAdvancementAccess() {
     }
 
@@ -26,40 +23,8 @@ final class ClientAdvancementAccess {
             return false;
         }
 
-        Map<AdvancementHolder, AdvancementProgress> progress = progress(advancements);
-        if (progress == null) {
-            return true;
-        }
+        Map<AdvancementHolder, AdvancementProgress> progress = ((ClientAdvancementsAccessor) advancements).splatcraft$getProgress();
         AdvancementProgress advancementProgress = progress.get(holder);
         return advancementProgress != null && advancementProgress.isDone();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<AdvancementHolder, AdvancementProgress> progress(ClientAdvancements advancements) {
-        Field field = progressField();
-        if (field == null) {
-            return null;
-        }
-
-        try {
-            return (Map<AdvancementHolder, AdvancementProgress>) field.get(advancements);
-        } catch (IllegalAccessException exception) {
-            return null;
-        }
-    }
-
-    private static Field progressField() {
-        if (progressFieldResolved) {
-            return progressField;
-        }
-        progressFieldResolved = true;
-        for (Field field : ClientAdvancements.class.getDeclaredFields()) {
-            if (Map.class.isAssignableFrom(field.getType())) {
-                field.setAccessible(true);
-                progressField = field;
-                break;
-            }
-        }
-        return progressField;
     }
 }

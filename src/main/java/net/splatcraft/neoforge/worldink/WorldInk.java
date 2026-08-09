@@ -139,7 +139,9 @@ public class WorldInk implements INBTSerializable<CompoundTag> {
         for (Map.Entry<BlockPos, Entry> entry : ink.entrySet()) {
             Entry inkEntry = entry.getValue();
             if (inkEntry.color() != color && filter.matches(inkEntry)) {
-                entry.setValue(new Entry(color, inkEntry.type()));
+                Entry replacement = new Entry(color, inkEntry.type());
+                entry.setValue(replacement);
+                sync(entry.getKey(), replacement);
                 changed = true;
             }
         }
@@ -150,7 +152,9 @@ public class WorldInk implements INBTSerializable<CompoundTag> {
                 entry.setValue(new Entry(color, inkEntry.type()));
                 Entry activeInk = ink.get(entry.getKey());
                 if (Objects.equals(activeInk, inkEntry)) {
-                    ink.put(entry.getKey(), new Entry(color, inkEntry.type()));
+                    Entry replacement = new Entry(color, inkEntry.type());
+                    ink.put(entry.getKey(), replacement);
+                    sync(entry.getKey(), replacement);
                 }
                 changed = true;
             }

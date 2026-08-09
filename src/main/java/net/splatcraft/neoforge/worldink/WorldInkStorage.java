@@ -57,7 +57,9 @@ public final class WorldInkStorage {
     }
 
     public static boolean ink(Level level, BlockPos pos, int color, ResourceLocation type) {
-        return get(level, pos).ink(pos, color, type);
+        return getOrCreateLoaded(level, new ChunkPos(pos))
+                .map(worldInk -> worldInk.ink(pos, color, type))
+                .orElse(false);
     }
 
     public static boolean clearInk(Level level, BlockPos pos) {
@@ -75,7 +77,9 @@ public final class WorldInkStorage {
     }
 
     public static boolean setPermanentInk(Level level, BlockPos pos, int color, ResourceLocation type) {
-        return get(level, pos).setPermanentInk(pos, color, type);
+        return getOrCreateLoaded(level, new ChunkPos(pos))
+                .map(worldInk -> worldInk.setPermanentInk(pos, color, type))
+                .orElse(false);
     }
 
     public static boolean removePermanentInk(Level level, BlockPos pos) {

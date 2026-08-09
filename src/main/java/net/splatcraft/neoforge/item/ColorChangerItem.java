@@ -44,7 +44,10 @@ public class ColorChangerItem extends RemoteItem {
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         if (!level.isClientSide && entity instanceof Player player && !InkColorComponent.isColorLocked(stack)) {
-            InkColorComponent.setColor(stack, SplatcraftPlayerInfoEvents.color(player));
+            int color = SplatcraftPlayerInfoEvents.color(player);
+            if (InkColorComponent.color(stack).orElse(-1) != color) {
+                InkColorComponent.setColor(stack, color);
+            }
         }
     }
 
@@ -81,6 +84,9 @@ public class ColorChangerItem extends RemoteItem {
         if (!InkAreaActions.inWorldBounds(level, pointA, pointB)) {
             return RemoteResult.fail(Component.translatable("status.change_color.out_of_world"));
         }
+        if (InkAreaActions.volume(pointA, pointB) > InkAreaActions.MAX_COMMAND_VOLUME) {
+            return RemoteResult.fail(Component.translatable("status.area_command.too_large"));
+        }
 
         int targetColor = InkColorComponent.color(stack).orElse(color);
         int affectedColor = color;
@@ -99,11 +105,11 @@ public class ColorChangerItem extends RemoteItem {
         });
         updateStageTeams(level, saveData, changedTeams, targetColor);
         updateBoundStageTeam(level, saveData, boundTeam, normalizedMode, targetColor);
-        int volume = Math.max(1, InkAreaActions.volume(pointA, pointB));
+        long volume = Math.max(1L, InkAreaActions.volume(pointA, pointB));
         return RemoteResult.success(
                 Component.translatable("status.change_color.success", count, colorName(targetColor)),
                 count,
-                count * 15 / volume);
+                (int) (count * 15L / volume));
     }
 
     private static boolean matches(

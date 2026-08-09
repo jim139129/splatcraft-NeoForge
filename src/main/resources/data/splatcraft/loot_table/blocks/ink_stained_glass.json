@@ -16,6 +16,11 @@
                   "source": "Color",
                   "target": "Color",
                   "op": "replace"
+                },
+                {
+                  "source": "Inverted",
+                  "target": "Inverted",
+                  "op": "replace"
                 }
               ]
             },

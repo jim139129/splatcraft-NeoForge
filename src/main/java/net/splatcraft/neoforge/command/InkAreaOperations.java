@@ -50,6 +50,10 @@ final class InkAreaOperations {
         return InkAreaActions.inWorldBounds(level, from, to);
     }
 
+    static boolean withinVolumeLimit(BlockPos from, BlockPos to) {
+        return InkAreaActions.volume(from, to) <= InkAreaActions.MAX_COMMAND_VOLUME;
+    }
+
     interface InkColorBlockVisitor {
         boolean visit(TeamInkColorBlock block);
     }
@@ -62,6 +66,10 @@ final class InkAreaOperations {
         void setColor(int color);
 
         void setTeam(String team);
+
+        default boolean canHaveTeam() {
+            return true;
+        }
     }
 
     private record InkAreaActionColorBlock(InkAreaActions.TeamInkColorBlock block) implements TeamInkColorBlock {
@@ -83,6 +91,11 @@ final class InkAreaOperations {
         @Override
         public void setTeam(String team) {
             block.setTeam(team);
+        }
+
+        @Override
+        public boolean canHaveTeam() {
+            return block.canHaveTeam();
         }
     }
 }

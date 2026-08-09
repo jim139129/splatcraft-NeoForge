@@ -3,6 +3,7 @@ package net.splatcraft.neoforge.recipe;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -17,10 +18,12 @@ import net.minecraft.world.level.Level;
 import net.splatcraft.neoforge.registry.SplatcraftRecipeSerializers;
 
 public record WeaponWorkbenchTabRecipe(ResourceLocation icon, int pos, Component name, boolean hidden) implements Recipe<RecipeInput> {
+    private static final Codec<Component> NAME_CODEC = Codec.either(Codec.STRING, ComponentSerialization.CODEC)
+            .xmap(value -> value.map(Component::translatable, component -> component), Either::right);
     public static final MapCodec<WeaponWorkbenchTabRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("icon").forGetter(WeaponWorkbenchTabRecipe::icon),
             Codec.INT.optionalFieldOf("pos", Integer.MAX_VALUE).forGetter(WeaponWorkbenchTabRecipe::pos),
-            ComponentSerialization.CODEC.optionalFieldOf("name", Component.empty()).forGetter(WeaponWorkbenchTabRecipe::name),
+            NAME_CODEC.optionalFieldOf("name", Component.empty()).forGetter(WeaponWorkbenchTabRecipe::name),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(WeaponWorkbenchTabRecipe::hidden)
     ).apply(instance, WeaponWorkbenchTabRecipe::new));
 

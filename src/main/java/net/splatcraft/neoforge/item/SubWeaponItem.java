@@ -95,9 +95,9 @@ public class SubWeaponItem<T extends AbstractSubWeaponEntity> extends WeaponItem
             if (isSingleUse(stack) && !player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SplatcraftSounds.SUB_THROW.get(), SoundSource.PLAYERS, 0.7F, 1.0F);
         }
 
-        level.playSound(null, player.getX(), player.getY(), player.getZ(), SplatcraftSounds.SUB_THROW.get(), SoundSource.PLAYERS, 0.7F, 1.0F);
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 

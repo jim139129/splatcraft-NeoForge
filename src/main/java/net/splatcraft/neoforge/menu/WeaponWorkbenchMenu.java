@@ -41,10 +41,6 @@ public class WeaponWorkbenchMenu extends AbstractContainerMenu {
         this(containerId, playerInventory, ContainerLevelAccess.create(playerInventory.player.level(), buffer.readBlockPos()));
     }
 
-    public WeaponWorkbenchMenu(int containerId, Inventory playerInventory) {
-        this(containerId, playerInventory, ContainerLevelAccess.NULL);
-    }
-
     public WeaponWorkbenchMenu(int containerId, Inventory playerInventory, ContainerLevelAccess access) {
         super(SplatcraftMenuTypes.WEAPON_WORKBENCH.get(), containerId);
         this.access = access;
@@ -83,8 +79,8 @@ public class WeaponWorkbenchMenu extends AbstractContainerMenu {
         if (player instanceof ServerPlayer serverPlayer) {
             SplatcraftCriteriaTriggers.CRAFT_WEAPON.get().trigger(serverPlayer, output.copy());
         }
-        player.awardStat(Stats.ITEM_CRAFTED.get(output.getItem()));
-        player.awardStat(Stats.CUSTOM.get(SplatcraftStats.WEAPONS_CRAFTED));
+        player.awardStat(Stats.ITEM_CRAFTED.get(output.getItem()), output.getCount());
+        player.awardStat(Stats.CUSTOM.get(SplatcraftStats.WEAPONS_CRAFTED), output.getCount());
         if (!player.addItem(output)) {
             ItemEntity item = player.drop(output, false);
             if (item != null) {
@@ -165,6 +161,27 @@ public class WeaponWorkbenchMenu extends AbstractContainerMenu {
         return consumeIngredients(player, ingredients, false);
     }
 
+    // Single-ingredient availability check that avoids copying the whole inventory; the UI calls this once
+    // per visible ingredient every frame. A lone ingredient never shares items with itself, so a running
+    // count is equivalent to the simulated consumption used by hasIngredients(...).
+    public boolean hasIngredient(Player player, WeaponWorkbenchRecipe.StackedIngredient ingredient) {
+        if (ingredient.count() <= 0) {
+            return true;
+        }
+        Inventory inventory = player.getInventory();
+        int available = 0;
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (!stack.isEmpty() && ingredient.ingredient().test(stack)) {
+                available += stack.getCount();
+                if (available >= ingredient.count()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static List<RecipeHolder<WeaponWorkbenchTabRecipe>> sortedTabs(Level level) {
         return level.getRecipeManager().getAllRecipesFor(SplatcraftRecipeSerializers.WEAPON_WORKBENCH_TAB_TYPE.get()).stream()
                 .sorted(Comparator.comparingInt((RecipeHolder<WeaponWorkbenchTabRecipe> recipe) -> recipe.value().pos())
@@ -185,8 +202,8 @@ public class WeaponWorkbenchMenu extends AbstractContainerMenu {
 
     private static boolean consumeIngredients(Player player, List<WeaponWorkbenchRecipe.StackedIngredient> ingredients, boolean takeItems) {
         Inventory inventory = player.getInventory();
-        List<ItemStack> simulated = new ArrayList<>(inventory.getContainerSize());
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+        List<ItemStack> simulated = new ArrayList<>(inventory.items.size());
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
             simulated.add(inventory.getItem(slot).copy());
         }
 

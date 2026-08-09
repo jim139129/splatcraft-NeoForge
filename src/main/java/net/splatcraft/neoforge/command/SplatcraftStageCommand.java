@@ -27,6 +27,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.splatcraft.neoforge.blockentity.SpawnPadBlockEntity;
 import net.splatcraft.neoforge.data.InkColorData;
@@ -440,7 +442,7 @@ public final class SplatcraftStageCommand {
             throws CommandSyntaxException {
         Stage stage = requireStage(source, stageId);
         int affectedBlocks = visitStageInkColorBlocks(source, stage, block -> {
-            if (block.color() == teamColor && !block.team().equals(teamId)) {
+            if (block.canHaveTeam() && block.color() == teamColor && !block.team().equals(teamId)) {
                 block.setTeam(teamId);
                 return true;
             }
@@ -469,7 +471,7 @@ public final class SplatcraftStageCommand {
 
         int teamColor = stage.getTeamColor(teamId);
         int affectedBlocks = visitStageInkColorBlocks(source, stage, block -> {
-            if (block.color() == teamColor && block.team().equals(teamId)) {
+            if (block.canHaveTeam() && block.color() == teamColor && block.team().equals(teamId)) {
                 block.setTeam("");
                 return true;
             }
@@ -611,6 +613,10 @@ public final class SplatcraftStageCommand {
         if (level == null) {
             return 0;
         }
+        if (!InkAreaOperations.withinVolumeLimit(stage.cornerA(), stage.cornerB())) {
+            source.sendFailure(Component.translatable("status.area_command.too_large"));
+            return 0;
+        }
 
         return InkAreaOperations.visitColorBlocks(level, stage.cornerA(), stage.cornerB(), visitor);
     }
@@ -643,9 +649,20 @@ public final class SplatcraftStageCommand {
         BlockPos min = InkAreaOperations.min(stage.cornerA(), stage.cornerB());
         BlockPos max = InkAreaOperations.max(stage.cornerA(), stage.cornerB());
         List<SpawnPadBlockEntity> spawnPads = new ArrayList<>();
-        for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
-            if (level.getBlockEntity(pos.immutable()) instanceof SpawnPadBlockEntity spawnPad) {
-                spawnPads.add(spawnPad);
+        // Iterate loaded chunks' block entity maps instead of every position in the stage volume;
+        // a per-position scan would synchronously load chunks and stall the server on large stages.
+        for (int chunkX = min.getX() >> 4; chunkX <= max.getX() >> 4; chunkX++) {
+            for (int chunkZ = min.getZ() >> 4; chunkZ <= max.getZ() >> 4; chunkZ++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk == null) {
+                    continue;
+                }
+                for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
+                    if (blockEntity instanceof SpawnPadBlockEntity spawnPad
+                            && stage.contains(level, spawnPad.getBlockPos())) {
+                        spawnPads.add(spawnPad);
+                    }
+                }
             }
         }
         return spawnPads;

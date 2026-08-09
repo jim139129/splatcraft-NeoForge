@@ -186,7 +186,7 @@ public record WeaponWorkbenchRecipe(ResourceLocation tab, int pos, List<Subtype>
 
             if (player instanceof ServerPlayer serverPlayer) {
                 AdvancementHolder holder = serverPlayer.getServer().getAdvancements().get(advancement.get());
-                return holder == null || serverPlayer.getAdvancements().getOrStartProgress(holder).isDone();
+                return holder != null && serverPlayer.getAdvancements().getOrStartProgress(holder).isDone();
             }
 
             return true;
