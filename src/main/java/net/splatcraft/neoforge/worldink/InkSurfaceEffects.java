@@ -82,7 +82,10 @@ public final class InkSurfaceEffects {
 
     private static void replaceInkSurfaceSound(PlayLevelSoundEvent event, BlockPos pos, Entity entity) {
         Holder<SoundEvent> sound = event.getSound();
-        if (sound == null || SquidInkMovement.inkSurfaceColor(event.getLevel(), pos).isEmpty()) {
+        // Block entities can emit sounds while their chunk is being unloaded (e.g. beacons).
+        // Looking up its block state with a loading query can deadlock the unload/save loop.
+        if (sound == null || !event.getLevel().hasChunkAt(pos)
+                || SquidInkMovement.inkSurfaceColor(event.getLevel(), pos).isEmpty()) {
             return;
         }
 

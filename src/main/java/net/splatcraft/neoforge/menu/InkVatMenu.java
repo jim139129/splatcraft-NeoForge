@@ -12,6 +12,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -173,6 +174,29 @@ public class InkVatMenu extends AbstractContainerMenu {
 
     public boolean isFor(InkVatBlockEntity inkVat) {
         return this.inkVat == inkVat;
+    }
+
+    public boolean isFor(BlockPos pos) {
+        return inkVat != null && inkVat.getBlockPos().equals(pos);
+    }
+
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (slotId == 4 && clickType == ClickType.SWAP) {
+            // Vanilla SWAP transfers the preview with setItem, bypassing removeItem and its cost.
+            // Use the same paid extraction as a normal click, including the onTake notification.
+            if (inkVat != null && (button >= 0 && button < 9 || button == 40)
+                    && player.getInventory().getItem(button).isEmpty()) {
+                updateOutput(inkVat);
+                Slot output = slots.get(4);
+                ItemStack taken = output.safeTake(output.getItem().getCount(), Integer.MAX_VALUE, player);
+                if (!taken.isEmpty()) {
+                    player.getInventory().setItem(button, taken);
+                }
+            }
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
     }
 
     @Override

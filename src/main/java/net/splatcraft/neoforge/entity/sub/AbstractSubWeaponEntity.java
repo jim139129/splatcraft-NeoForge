@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.ItemStack;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.splatcraft.neoforge.data.InkColorComponent;
 import net.splatcraft.neoforge.data.InkColorData;
 import net.splatcraft.neoforge.data.WeaponSettings;
@@ -129,7 +131,22 @@ public abstract class AbstractSubWeaponEntity extends ThrowableItemProjectile im
 
     @Override
     public void tick() {
+        Vec3 previousPosition = position();
         super.tick();
+        if (isRemoved()) {
+            return;
+        }
+        if (usesGroundCollision()) {
+            // ThrowableProjectile computes a ray-tested displacement (including our bounces),
+            // but teleports with setPos. Resolve that displacement against the entity's bounds
+            // once, so ground contact, sliding and walking off ledges update onGround correctly.
+            Vec3 movement = position().subtract(previousPosition);
+            setPos(previousPosition);
+            if (onGround() && movement.y == 0.0D) {
+                movement = new Vec3(movement.x, -1.0E-5D, movement.z);
+            }
+            move(MoverType.SELF, movement);
+        }
         if (isInWater()) {
             if (!level().isClientSide) {
                 level().broadcastEntityEvent(this, (byte) -1);
@@ -142,6 +159,10 @@ public abstract class AbstractSubWeaponEntity extends ThrowableItemProjectile im
         if (!level().isClientSide && age >= lifetimeTicks()) {
             expire();
         }
+    }
+
+    protected boolean usesGroundCollision() {
+        return false;
     }
 
     @Override

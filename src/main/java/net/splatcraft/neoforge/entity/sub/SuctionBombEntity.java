@@ -67,7 +67,7 @@ public class SuctionBombEntity extends AbstractSubWeaponEntity {
         setNoGravity(true);
         setDeltaMovement(Vec3.ZERO);
         Vec3 normal = Vec3.atLowerCornerOf(result.getDirection().getNormal()).scale(0.05D);
-        Vec3 location = result.getLocation().subtract(normal);
+        Vec3 location = result.getLocation().add(normal);
         setPosRaw(location.x, location.y, location.z);
 
         stickFacing = result.getDirection();

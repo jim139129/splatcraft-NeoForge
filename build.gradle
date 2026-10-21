@@ -25,6 +25,18 @@ sourceSets.main.resources {
     exclude("src/generated/**/.cache") // datagen cache files
 }
 
+// Runtime regression tests are loaded only by the GameTest run, not shipped in the mod jar.
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations {
+    gameTestImplementation.extendsFrom implementation
+    gameTestRuntimeOnly.extendsFrom runtimeOnly
+}
+
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
 }
@@ -78,6 +90,7 @@ runs {
     // The gametest system is also enabled by default for other run configs under the /test command.
     gameTestServer {
         systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        modSource project.sourceSets.gameTest
     }
 
     data {

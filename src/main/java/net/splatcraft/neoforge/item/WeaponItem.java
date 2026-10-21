@@ -101,10 +101,6 @@ public class WeaponItem extends Item {
             return;
         }
 
-        if (SplatcraftPlayerInfoEvents.isSquid(player) && !player.isUsingItem()) {
-            clearStoredCharge(stack);
-        }
-
         boolean splatlingFiring = weaponClass == WeaponClass.SPLATLING && hasSplatlingFiring(stack);
         if (splatlingFiring) {
             tickSplatlingFiring(level, player, stack);

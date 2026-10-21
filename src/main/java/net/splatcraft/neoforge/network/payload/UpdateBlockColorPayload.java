@@ -35,13 +35,16 @@ public record UpdateBlockColorPayload(BlockPos pos, int color, int inkVatPointer
     }
 
     private static void handleServer(UpdateBlockColorPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || player.isSpectator()) {
+        if (!(context.player() instanceof ServerPlayer player) || player.isSpectator()
+                || !(player.containerMenu instanceof InkVatMenu menu)
+                || !menu.isFor(payload.pos)
+                || !player.level().hasChunkAt(payload.pos)
+                || !menu.stillValid(player)) {
             return;
         }
 
         BlockEntity blockEntity = player.level().getBlockEntity(payload.pos);
         if (!(blockEntity instanceof InkVatBlockEntity inkVat)
-                || !(player.containerMenu instanceof InkVatMenu menu)
                 || !menu.isFor(inkVat)
                 || !inkVat.stillValid(player)) {
             return;

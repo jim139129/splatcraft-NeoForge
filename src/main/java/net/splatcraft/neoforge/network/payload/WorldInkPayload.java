@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -40,24 +41,26 @@ public record WorldInkPayload(ChunkPos chunkPos, Map<BlockPos, WorldInk.Entry> i
         context.enqueueWork(() -> {
             Level level = context.player().level();
             WorldInkStorage.getOrCreateLoaded(level, payload.chunkPos).ifPresent(worldInk -> {
-                Set<BlockPos> positionsToUpdate = new HashSet<>(worldInk.inkInChunk().keySet());
-                positionsToUpdate.addAll(payload.ink.keySet());
-
-                if (payload.replace) {
-                    worldInk.replaceSyncedInk(payload.ink);
-                } else {
-                    payload.ink.forEach(worldInk::setSyncedInk);
-                }
-
-                for (BlockPos localPos : positionsToUpdate) {
+                payload.apply(worldInk, localPos -> {
                     BlockPos pos = new BlockPos(
                             payload.chunkPos.x * 16 + localPos.getX(),
                             localPos.getY(),
                             payload.chunkPos.z * 16 + localPos.getZ());
                     level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 2);
-                }
+                });
             });
         });
+    }
+
+    void apply(WorldInk worldInk, Consumer<BlockPos> updatePosition) {
+        Set<BlockPos> positionsToUpdate = new HashSet<>(ink.keySet());
+        if (replace) {
+            positionsToUpdate.addAll(worldInk.inkInChunk().keySet());
+            worldInk.replaceSyncedInk(ink);
+        } else {
+            ink.forEach(worldInk::setSyncedInk);
+        }
+        positionsToUpdate.forEach(updatePosition);
     }
 
     @Override

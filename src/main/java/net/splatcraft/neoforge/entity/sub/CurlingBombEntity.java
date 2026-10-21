@@ -53,6 +53,11 @@ public class CurlingBombEntity extends AbstractSubWeaponEntity {
     }
 
     @Override
+    protected boolean usesGroundCollision() {
+        return true;
+    }
+
+    @Override
     public void tick() {
         super.tick();
         if (isRemoved()) {
@@ -94,7 +99,7 @@ public class CurlingBombEntity extends AbstractSubWeaponEntity {
         Direction face = result.getDirection();
         if (face.getAxis() == Direction.Axis.X) {
             setDeltaMovement(-velocity.x, velocity.y, velocity.z);
-        } else if (face.getAxis() == Direction.Axis.Y && Math.abs(velocity.y) >= 0.05D) {
+        } else if (face == Direction.DOWN && Math.abs(velocity.y) >= 0.05D) {
             setDeltaMovement(velocity.x, -velocity.y * 0.5D, velocity.z);
         } else if (face.getAxis() == Direction.Axis.Z) {
             setDeltaMovement(velocity.x, velocity.y, -velocity.z);

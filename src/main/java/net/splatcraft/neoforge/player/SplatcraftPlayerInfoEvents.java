@@ -9,6 +9,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.splatcraft.neoforge.data.InkColorData;
 import net.splatcraft.neoforge.data.SplatcraftTags;
+import net.splatcraft.neoforge.item.WeaponItem;
 import net.splatcraft.neoforge.network.payload.GameRulesPayload;
 import net.splatcraft.neoforge.network.payload.PlayerColorsPayload;
 import net.splatcraft.neoforge.network.payload.PlayerSkinOverlayPayload;
@@ -91,6 +92,13 @@ public final class SplatcraftPlayerInfoEvents {
         }
 
         info.setSquid(squid);
+        // Release while the new squid state is visible, before the tick handler stops item use.
+        // Only chargeable weapons use this path; transforming must not fire other held items.
+        if (squid && player.getUseItem().getItem() instanceof WeaponItem weapon
+                && (weapon.weaponClass() == WeaponItem.WeaponClass.CHARGER
+                    || weapon.weaponClass() == WeaponItem.WeaponClass.SPLATLING)) {
+            player.releaseUsingItem();
+        }
         player.refreshDimensions();
         if (player instanceof ServerPlayer serverPlayer) {
             sync(serverPlayer);

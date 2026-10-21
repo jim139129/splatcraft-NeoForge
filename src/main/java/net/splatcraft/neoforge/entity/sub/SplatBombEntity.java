@@ -26,6 +26,9 @@ public class SplatBombEntity extends AbstractSubWeaponEntity {
     @Override
     public void tick() {
         super.tick();
+        if (isRemoved()) {
+            return;
+        }
         previousFuseTime = fuseTime;
         if (onGround()) {
             fuseTime++;
@@ -33,6 +36,11 @@ public class SplatBombEntity extends AbstractSubWeaponEntity {
                 expire();
             }
         }
+    }
+
+    @Override
+    protected boolean usesGroundCollision() {
+        return true;
     }
 
     @Override
@@ -69,7 +77,10 @@ public class SplatBombEntity extends AbstractSubWeaponEntity {
         Vec3 velocity = getDeltaMovement();
         if (face.getAxis() == Direction.Axis.X) {
             setDeltaMovement(-velocity.x, velocity.y, velocity.z);
-        } else if (face.getAxis() == Direction.Axis.Y && Math.abs(velocity.y) >= 0.05D) {
+        } else if (face.getAxis() == Direction.Axis.Y
+                // Let low-energy floor impacts settle through Entity.move instead of endlessly
+                // bouncing just above the surface as gravity rebuilds a tiny downward velocity.
+                && Math.abs(velocity.y) >= (face == Direction.UP ? 0.1D : 0.05D)) {
             setDeltaMovement(velocity.x, -velocity.y * 0.5D, velocity.z);
         } else if (face.getAxis() == Direction.Axis.Z) {
             setDeltaMovement(velocity.x, velocity.y, -velocity.z);
